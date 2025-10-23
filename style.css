@@ -1,0 +1,56 @@
+body {
+  font-family: sans-serif;
+  text-align: center;
+  background: #f7f9fb;
+  margin: 0;
+  padding: 20px;
+}
+
+h2 { margin-bottom: 15px; }
+
+#calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 40px);
+  gap: 5px;
+  justify-content: center;
+}
+
+.day {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  background: white;
+  border: 1px solid #ccc;
+  line-height: 40px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.day:hover { background: #eee; }
+
+.blue { background: #3a86ff; }
+.green { background: #06d6a0; }
+.red { background: #ef233c; }
+.yellow { background: #ffd166; }
+
+#legend {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.color {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+#message {
+  margin-top: 15px;
+  font-weight: bold;
+  color: #333;
+}
