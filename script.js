@@ -4,7 +4,7 @@ tg.expand();
 const user = tg.initDataUnsafe?.user || { id: "0", username: "Неизвестен" };
 
 // 🔗 URL твоего Google Apps Script (должен быть типа https://script.google.com/macros/s/AKfycb.../exec)
-const apiUrl = "https://script.google.com/macros/s/AKfycbwt6FMo9J4fi8Rr7VbfwBz7_zILHu7y8RSpvmNVqc5Z9bSnw2Vx_16Jr1LM9PCWpp1d/exec";
+const apiUrl = "https://script.google.com/macros/s/AKfycbwzCCGv-zM_7BFb_E0N4MnHmy_vBQmujcaxGU0lO3cTu8zVMU3klbFTxrza13lcbV-Y/exec";
 
 // 🔹 Цвета пользователей (по user.id Telegram)
 const userColors = {
