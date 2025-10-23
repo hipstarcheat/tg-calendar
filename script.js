@@ -2,7 +2,7 @@ const tg = window.Telegram.WebApp;
 tg.expand();
 const user = tg.initDataUnsafe?.user || {};
 
-const apiUrl = "https://script.google.com/macros/s/AKfycbw-ge2Q9hYzq3euP8ADD-zi8WEMm4YZqQ7D3bWC-SFmRIWf7AToTrkYM6UXNFcMjSCM/exec";
+const apiUrl = "https://script.google.com/macros/s/AKfycbyFlxZTs9jGlcfxoQKWib2gAZT3LEhi4VwD-0HFRG4xanmCcKbUMpjIsNyHheA-78lG/exec";
 
 // Привязка цветов к userId
 const userColors = {
