@@ -1,10 +1,10 @@
 // === Telegram Mini App и календарь ===
 const tg = window.Telegram.WebApp;
 tg.expand();
-const user = tg.initDataUnsafe?.user || { id: "0", username: "Неизвестен" };
+const user = tg.initDataUnsafe?.user || { id: "298802988", username: "Неизвестен" };
 
 // 🔗 URL твоего Google Apps Script (должен быть типа https://script.google.com/macros/s/AKfycb.../exec)
-const apiUrl = "https://script.google.com/macros/s/AKfycbyE1Wv3rhySez1aPGp3h7vj44tuA1cuNNV6nLIyuGCmJELNQAxYJnndZCF6M1PIL_j1/exec";
+const apiUrl = "https://script.google.com/macros/s/AKfycbx9SxRymIxjcnjwfoov7RE9emSbGqcY0zM0VFToaj5y0yVBi59TF8IlIjiFSWBZ_hN1/exec";
 
 // 🔹 Цвета пользователей (по user.id Telegram)
 const userColors = {
