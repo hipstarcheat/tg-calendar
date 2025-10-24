@@ -28,13 +28,18 @@ const legendContainer = document.getElementById("legend");
 
 async function testFetch() {
   try {
+    // Telegram Web App проксирует запрос, если используешь fetch напрямую через HTTPS
     const res = await fetch(apiUrl);
     debug.innerText += `Test GET status: ${res.status}\n`;
+    const data = await res.json();
+    debug.innerText += `Test GET response: ${JSON.stringify(data)}\n`;
   } catch (err) {
     debug.innerText += `Test GET failed: ${err}\n`;
   }
 }
+
 testFetch();
+
 
 // Генерация календаря
 for (let day = 1; day <= 31; day++) {
