@@ -1,94 +1,79 @@
-const tg = window.Telegram.WebApp;
-tg.expand();
-const user = tg.initDataUnsafe?.user || {};
-const userId = String(user.id);
+document.addEventListener("DOMContentLoaded", () => {
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+    const user = tg.initDataUnsafe?.user || {};
+    const userId = String(user.id);
 
-// URL Apps Script для работы с листом "Выручка"
-const apiRevenueUrl = "https://script.google.com/macros/s/AKfycbzSy0h3uWURmz9wdGOqbRYx73ciayzXVTyIX5YcIL-tzi0ZJZfrAwi2WIaXvn2cGbqK/exec";
+    const apiUrl = "https://script.google.com/macros/s/AKfycbzSy0h3uWURmz9wdGOqbRYx73ciayzXVTyIX5YcIL-tzi0ZJZfrAwi2WIaXvn2cGbqK/exec";
 
-// Кнопка для открытия второго календаря
-const openRevenueBtn = document.getElementById("openRevenue");
-const revenueWindow = document.getElementById("revenueWindow");
-const calendarRevenue = document.getElementById("calendarRevenue");
-const messageRevenue = document.getElementById("messageRevenue");
-const debugRevenue = document.getElementById("debugRevenue");
+    const calendar = document.getElementById("calendar");
+    const message = document.getElementById("message");
+    const debug = document.getElementById("debug");
+    const revenueBtn = document.getElementById("openRevenue");
+    const revenueWindow = document.getElementById("revenueWindow");
 
-openRevenueBtn.onclick = () => {
-    revenueWindow.style.display = "block";
-    loadRevenueDays();
-};
-
-// Генерация календаря для выручки (1–31)
-for (let day = 1; day <= 31; day++) {
-    const cell = document.createElement("div");
-    cell.className = "dayRevenue";
-    cell.textContent = day;
-    cell.onclick = () => handleRevenueDayClick(day, cell);
-    calendarRevenue.appendChild(cell);
-}
-
-// Загрузка уже введенной выручки
-async function loadRevenueDays() {
-    try {
-        const res = await fetch(apiRevenueUrl);
-        debugRevenue.innerText += `GET status: ${res.status}\n`;
-        const data = await res.json();
-        debugRevenue.innerText += `GET response: ${JSON.stringify(data)}\n`;
-
-        data.forEach(item => {
-            const cell = [...calendarRevenue.children][parseInt(item.day) - 1];
-            if (!cell) return;
-            if (item.value) {
-                cell.style.border = "1px solid gray";
-                cell.style.fontSize = "10px";
-                cell.style.color = "gray";
-                cell.textContent = `${item.day}\n${item.value}`;
-            }
-        });
-
-        // Показ ЗП
-        if (userId === "654321") messageRevenue.textContent = `ЗП Артур: ${data[0]?.salaryA || 0}`;
-        else if (userId === "654323") messageRevenue.textContent = `ЗП Влад: ${data[0]?.salaryB || 0}`;
-    } catch (err) {
-        debugRevenue.innerText += `Ошибка при загрузке выручки: ${err}\n`;
+    // Генерация календаря
+    for (let day = 1; day <= 31; day++) {
+        const cell = document.createElement("div");
+        cell.className = "day";
+        cell.textContent = day;
+        cell.onclick = () => handleDayClick(day, cell);
+        calendar.appendChild(cell);
     }
-}
 
-// Обработка клика по дню календаря выручки
-async function handleRevenueDayClick(day, cell) {
-    let value = prompt(`Введите выручку за ${day} число:`);
-    if (value === null) return; // отмена
+    async function loadDays() {
+        try {
+            const res = await fetch(apiUrl);
+            debug.innerText += `GET status: ${res.status}\n`;
+            const data = await res.json();
+            debug.innerText += `GET response: ${JSON.stringify(data)}\n`;
 
-    const body = { day: String(day), value: value };
+            data.forEach(item => {
+                const cell = [...calendar.children][parseInt(item.date) - 1];
+                if (!cell) return;
+                const color = userColors[item.userId] || "gray";
+                cell.classList.add(color);
+            });
+        } catch (err) {
+            debug.innerText += `Ошибка при загрузке дней: ${err}\n`;
+        }
+    }
 
-    try {
-        const res = await fetch(apiRevenueUrl, {
-            method: "POST",
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-        });
-        debugRevenue.innerText += `POST status: ${res.status}\n`;
-        const data = await res.json();
-        debugRevenue.innerText += `POST response: ${JSON.stringify(data)}\n`;
-
-        if (!data.success) {
-            messageRevenue.textContent = data.error || "Ошибка при добавлении";
-        } else {
-            // Обновляем ячейку с рамкой и числом
-            cell.style.border = "1px solid gray";
-            cell.style.fontSize = "10px";
-            cell.style.color = "gray";
-            cell.textContent = `${day}\n${value}`;
-
-            messageRevenue.textContent = "Выручка добавлена!";
+    async function handleDayClick(day, cell) {
+        if (cell.classList.contains("blue") || cell.classList.contains("green") ||
+            cell.classList.contains("red") || cell.classList.contains("yellow")) {
+            message.textContent = "Этот день уже занят!";
+            return;
         }
 
-        // Обновляем ЗП
-        if (userId === "654321") messageRevenue.textContent += ` | ЗП Артур: ${data.salaryA || 0}`;
-        else if (userId === "654323") messageRevenue.textContent += ` | ЗП Влад: ${data.salaryB || 0}`;
+        const body = { userId, date: String(day) };
 
-    } catch (err) {
-        debugRevenue.innerText += `Ошибка при добавлении выручки: ${err}\n`;
-        messageRevenue.textContent = "Ошибка сети";
+        try {
+            const res = await fetch(apiUrl, {
+                method: "POST",
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            debug.innerText += `POST status: ${res.status}\n`;
+            const data = await res.json();
+            debug.innerText += `POST response: ${JSON.stringify(data)}\n`;
+
+            if (!data.success) {
+                message.textContent = data.error || "Ошибка при добавлении";
+            } else {
+                cell.classList.add(userColors[userId] || "blue");
+                message.textContent = "Смена добавлена!";
+            }
+        } catch (err) {
+            debug.innerText += `Ошибка при добавлении дня: ${err}\n`;
+            message.textContent = "Ошибка сети";
+        }
     }
-}
+
+    loadDays();
+
+    // Кнопка открытия календаря выручки
+    revenueBtn.addEventListener("click", () => {
+        revenueWindow.style.display = revenueWindow.style.display === "none" ? "block" : "none";
+    });
+});
