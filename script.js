@@ -18,7 +18,7 @@ const userNames = {
   "654321": "Артур",
   "654323": "Влад",
   "298802988": "Управляющий",
-  "222222": "Замена"
+  "1": "Замена"
 };
 
 const calendar = document.getElementById("calendar");
@@ -34,6 +34,9 @@ for (let day = 1; day <= 31; day++) {
   cell.onclick = () => handleDayClick(day, cell);
   calendar.appendChild(cell);
 }
+
+// Очистка легенды перед генерацией
+legendContainer.innerHTML = "";
 
 // Генерация легенды пользователей под календарем
 for (const id in userColors) {
