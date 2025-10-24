@@ -39,3 +39,15 @@ body {
   color: orange;
   white-space: pre-wrap;
 }
+
+#legend .color {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.color.blue { background-color: blue; }
+.color.green { background-color: green; }
+.color.red { background-color: red; }
+.color.yellow { background-color: yellow; }
