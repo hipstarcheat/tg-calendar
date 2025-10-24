@@ -2,7 +2,7 @@ const tg = window.Telegram.WebApp;
 tg.expand();
 const user = tg.initDataUnsafe?.user || {};
 const userId = user.id; // уникальный ID Telegram
-const apiUrl = "https://script.google.com/macros/s/AKfycbz5ihjGr-fVKrs6Qi-95ouM5ILHv9GQ3JHI5YkgkNPFDqwPRP2YnI1Co_5W_xbDQy2v/exec"; // например, https://script.google.com/macros/s/xxx/exec
+const apiUrl = "https://script.google.com/macros/s/AKfycbyOJI-yI8a6xiXd6EA_SWTMNMQYcYZVnQvtrGv-9kFfZvTrfl8xaR1CtboDqMhk171W/exec"; // например, https://script.google.com/macros/s/xxx/exec
 
 // Привязка цветов к userId
 const userColors = {
