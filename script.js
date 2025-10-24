@@ -35,29 +35,7 @@ for (let day = 1; day <= 31; day++) {
   calendar.appendChild(cell);
 }
 
-// Очистка легенды перед генерацией
-legendContainer.innerHTML = "";
 
-// Генерация легенды пользователей под календарем
-for (const id in userColors) {
-  const userBlock = document.createElement("div");
-  userBlock.style.display = "flex";
-  userBlock.style.alignItems = "center";
-  userBlock.style.marginBottom = "4px";
-
-  const colorBox = document.createElement("div");
-  colorBox.style.width = "16px";
-  colorBox.style.height = "16px";
-  colorBox.style.backgroundColor = userColors[id];
-  colorBox.style.marginRight = "6px";
-
-  const label = document.createElement("span");
-  label.textContent = userNames[id];
-
-  userBlock.appendChild(colorBox);
-  userBlock.appendChild(label);
-  legendContainer.appendChild(userBlock);
-}
 
 // Загрузка уже выбранных дней
 async function loadDays() {
