@@ -3,7 +3,7 @@ tg.expand();
 const user = tg.initDataUnsafe?.user || {};
 const userId = String(user.id); // обязательно строка
 
-const apiUrl = "https://script.google.com/macros/s/AKfycbyZr85VJs8GcLo8_KX07DXYWcGlFGtcHjJn514vvs22pwUbNBx5xm_7kIKTyDaJhCC9/exec";
+const apiUrl = "https://script.google.com/macros/s/AKfycbwOv3uWw1c6zD1ocaQ-HyWtR5bYQef58XvslOgFDha5KnqySRKlWXMbtgc_j5zMITyX/exec";
 
 // Цвета закреплены за конкретными ID
 const userColors = {
