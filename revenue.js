@@ -4,7 +4,7 @@ const user = tg.initDataUnsafe?.user || {};
 const userId = String(user.id);
 
 // URL Apps Script для работы с листом "Выручка"
-const apiRevenueUrl = "https://script.google.com/macros/s/ВАШ_ID/exec";
+const apiRevenueUrl = "https://script.google.com/macros/s/AKfycbzSy0h3uWURmz9wdGOqbRYx73ciayzXVTyIX5YcIL-tzi0ZJZfrAwi2WIaXvn2cGbqK/exec";
 
 // Кнопка для открытия второго календаря
 const openRevenueBtn = document.getElementById("openRevenue");
