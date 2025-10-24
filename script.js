@@ -26,6 +26,16 @@ const message = document.getElementById("message");
 const debug = document.getElementById("debug");
 const legendContainer = document.getElementById("legend");
 
+async function testFetch() {
+  try {
+    const res = await fetch(apiUrl);
+    debug.innerText += `Test GET status: ${res.status}\n`;
+  } catch (err) {
+    debug.innerText += `Test GET failed: ${err}\n`;
+  }
+}
+testFetch();
+
 // Генерация календаря
 for (let day = 1; day <= 31; day++) {
   const cell = document.createElement("div");
