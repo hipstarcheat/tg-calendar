@@ -1,19 +1,15 @@
 const tg = window.Telegram.WebApp;
 tg.expand();
 const user = tg.initDataUnsafe?.user || {};
-const userId = String(user.id); // обязательно строка
+const userId = String(user.id);
 
-const apiUrl = "https://script.google.com/macros/s/AKfycbzLsmoi-DB4Awce8iGglKUU_L2qMX3FZI4Wpw8XfsTiAglCVtuHK02zvS1avA7qybVg/exec";
-
-// Цвета закреплены за конкретными ID
 const userColors = {
-  "654321": "blue",       // Артур
-  "654323": "green",      // Влад
-  "298802988": "red",     // Управляющий
-  "222222": "yellow"      // Замена
+  "654321": "blue",
+  "654323": "green",
+  "298802988": "red",
+  "222222": "yellow"
 };
 
-// Для легенды: имена пользователей
 const userNames = {
   "654321": "Артур",
   "654323": "Влад",
@@ -26,21 +22,6 @@ const message = document.getElementById("message");
 const debug = document.getElementById("debug");
 const legendContainer = document.getElementById("legend");
 
-async function testFetch() {
-  try {
-    // Telegram Web App проксирует запрос, если используешь fetch напрямую через HTTPS
-    const res = await fetch(apiUrl);
-    debug.innerText += `Test GET status: ${res.status}\n`;
-    const data = await res.json();
-    debug.innerText += `Test GET response: ${JSON.stringify(data)}\n`;
-  } catch (err) {
-    debug.innerText += `Test GET failed: ${err}\n`;
-  }
-}
-
-testFetch();
-
-
 // Генерация календаря
 for (let day = 1; day <= 31; day++) {
   const cell = document.createElement("div");
@@ -50,58 +31,52 @@ for (let day = 1; day <= 31; day++) {
   calendar.appendChild(cell);
 }
 
+// Генерация легенды
+for (const id in userColors) {
+  const block = document.createElement("div");
 
+  const colorBox = document.createElement("span");
+  colorBox.className = "color-box";
+  colorBox.style.backgroundColor = userColors[id];
 
-// Загрузка уже выбранных дней
-async function loadDays() {
-  try {
-    const res = await fetch(apiUrl);
-    debug.innerText += `GET status: ${res.status}\n`;
-    const data = await res.json();
-    debug.innerText += `GET response: ${JSON.stringify(data)}\n`;
+  const label = document.createElement("span");
+  label.textContent = userNames[id];
 
-    data.forEach(item => {
-      const cell = [...calendar.children][parseInt(item.date) - 1];
-      if (!cell) return;
-      const color = userColors[item.userId] || "gray"; // чужой или неизвестный ID
-      cell.classList.add(color);
-    });
-  } catch (err) {
-    debug.innerText += `Ошибка при загрузке дней: ${err}\n`;
-  }
+  block.appendChild(colorBox);
+  block.appendChild(label);
+  legendContainer.appendChild(block);
 }
 
 // Обработка клика по дню
-async function handleDayClick(day, cell) {
+function handleDayClick(day, cell) {
   if (cell.classList.contains("blue") || cell.classList.contains("green") ||
       cell.classList.contains("red") || cell.classList.contains("yellow")) {
     message.textContent = "Этот день уже занят!";
     return;
   }
 
-  const body = { userId, date: String(day) };
+  const payload = { action: "addDay", userId, date: day };
+  tg.sendData(JSON.stringify(payload));
+  debug.innerText += `Отправлено через TG WebApp: ${JSON.stringify(payload)}\n`;
 
-  try {
-    const res = await fetch(apiUrl, {
-      method: "POST",
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    debug.innerText += `POST status: ${res.status}\n`;
-    const data = await res.json();
-    debug.innerText += `POST response: ${JSON.stringify(data)}\n`;
-    
-    if (!data.success) {
-      message.textContent = data.error || "Ошибка при добавлении";
-    } else {
-      // красим день только в цвет текущего пользователя
-      cell.classList.add(userColors[userId] || "blue");
-      message.textContent = "Смена добавлена!";
-    }
-  } catch (err) {
-    debug.innerText += `Ошибка при добавлении дня: ${err}\n`;
-    message.textContent = "Ошибка сети";
-  }
+  // локальное отображение
+  cell.classList.add(userColors[userId] || "blue");
+  message.textContent = "Смена добавлена (локально)";
 }
 
-loadDays();
+// Загрузка дней
+function loadDays(days) {
+  // days = [{ userId: "298802988", date: 5 }, ...]
+  days.forEach(item => {
+    const cell = [...calendar.children][item.date - 1];
+    if (!cell) return;
+    const color = userColors[item.userId] || "gray";
+    cell.classList.add(color);
+  });
+  debug.innerText += `Загружены дни: ${JSON.stringify(days)}\n`;
+}
+
+// Автоматическая инициализация, если GAS передал дни через initData
+if (tg.initDataUnsafe && tg.initDataUnsafe.days) {
+  loadDays(tg.initDataUnsafe.days);
+}
