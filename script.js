@@ -6,9 +6,9 @@ const userId = user.id;
 const apiUrl = "https://script.google.com/macros/s/AKfycbyOJI-yI8a6xiXd6EA_SWTMNMQYcYZVnQvtrGv-9kFfZvTrfl8xaR1CtboDqMhk171W/exec";
 
 const userColors = {
-  [userId]: "blue",
-  "654321": "green",
-  "111111": "red",
+  "951377763": "blue",
+  "578828973": "green",
+  "298802988": "red",
   "222222": "yellow"
 };
 
