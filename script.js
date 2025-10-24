@@ -7,24 +7,15 @@ const apiUrl = "https://script.google.com/macros/s/AKfycbzHpdlvADP0UxzavvlriKX1d
 
 // Цвета закреплены за конкретными ID
 const userColors = {
-  "654321": "blue",       // Артур
-  "654323": "green",      // Влад
-  "298802988": "red",     // Управляющий
-  "222222": "yellow"      // Замена
-};
-
-// Для легенды: имена пользователей
-const userNames = {
-  "654321": "Артур",
-  "654323": "Влад",
-  "298802988": "Управляющий",
-  "222222": "Замена"
+  "654321": "blue",
+  "654323": "green",
+  "298802988": "red",
+  "222222": "yellow"
 };
 
 const calendar = document.getElementById("calendar");
 const message = document.getElementById("message");
 const debug = document.getElementById("debug");
-const legendContainer = document.getElementById("legend");
 
 // Генерация календаря
 for (let day = 1; day <= 31; day++) {
@@ -33,27 +24,6 @@ for (let day = 1; day <= 31; day++) {
   cell.textContent = day;
   cell.onclick = () => handleDayClick(day, cell);
   calendar.appendChild(cell);
-}
-
-// Генерация легенды пользователей под календарем
-for (const id in userColors) {
-  const userBlock = document.createElement("div");
-  userBlock.style.display = "flex";
-  userBlock.style.alignItems = "center";
-  userBlock.style.marginBottom = "4px";
-
-  const colorBox = document.createElement("div");
-  colorBox.style.width = "16px";
-  colorBox.style.height = "16px";
-  colorBox.style.backgroundColor = userColors[id];
-  colorBox.style.marginRight = "6px";
-
-  const label = document.createElement("span");
-  label.textContent = userNames[id];
-
-  userBlock.appendChild(colorBox);
-  userBlock.appendChild(label);
-  legendContainer.appendChild(userBlock);
 }
 
 // Загрузка уже выбранных дней
