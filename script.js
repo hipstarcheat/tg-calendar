@@ -1,23 +1,21 @@
 const tg = window.Telegram.WebApp;
 tg.expand();
 const user = tg.initDataUnsafe?.user || {};
-const userId = String(user.id); // обязательно строка
+const userId = user.id; // уникальный ID Telegram
+const apiUrl = "https://script.google.com/macros/s/AKfycbz5ihjGr-fVKrs6Qi-95ouM5ILHv9GQ3JHI5YkgkNPFDqwPRP2YnI1Co_5W_xbDQy2v/exec"; // например, https://script.google.com/macros/s/xxx/exec
 
-const apiUrl = "https://script.google.com/macros/s/AKfycbz5ihjGr-fVKrs6Qi-95ouM5ILHv9GQ3JHI5YkgkNPFDqwPRP2YnI1Co_5W_xbDQy2v/exec";
-
-// Цвета закреплены за конкретными ID
+// Привязка цветов к userId
 const userColors = {
-  "654321": "blue",
-  "654323": "green",
-  "298802988": "red",
+  [userId]: "blue", // текущий пользователь
+  "654321": "green",
+  "111111": "red",
   "222222": "yellow"
 };
 
 const calendar = document.getElementById("calendar");
 const message = document.getElementById("message");
-const debug = document.getElementById("debug");
 
-// Генерация календаря
+// Генерация календаря 1–31
 for (let day = 1; day <= 31; day++) {
   const cell = document.createElement("div");
   cell.className = "day";
@@ -26,26 +24,22 @@ for (let day = 1; day <= 31; day++) {
   calendar.appendChild(cell);
 }
 
-// Загрузка уже выбранных дней
 async function loadDays() {
   try {
     const res = await fetch(apiUrl);
-    debug.innerText += `GET status: ${res.status}\n`;
     const data = await res.json();
-    debug.innerText += `GET response: ${JSON.stringify(data)}\n`;
 
     data.forEach(item => {
       const cell = [...calendar.children][parseInt(item.date) - 1];
       if (!cell) return;
-      const color = userColors[item.userId] || "gray"; // чужой или неизвестный ID
+      const color = userColors[item.userId] || "gray";
       cell.classList.add(color);
     });
   } catch (err) {
-    debug.innerText += `Ошибка при загрузке дней: ${err}\n`;
+    console.error("Ошибка при загрузке дней:", err);
   }
 }
 
-// Обработка клика по дню
 async function handleDayClick(day, cell) {
   if (cell.classList.contains("blue") || cell.classList.contains("green") ||
       cell.classList.contains("red") || cell.classList.contains("yellow")) {
@@ -54,26 +48,23 @@ async function handleDayClick(day, cell) {
   }
 
   const body = { userId, date: String(day) };
-
+  
   try {
     const res = await fetch(apiUrl, {
       method: "POST",
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     });
-    debug.innerText += `POST status: ${res.status}\n`;
     const data = await res.json();
-    debug.innerText += `POST response: ${JSON.stringify(data)}\n`;
-    
+
     if (!data.success) {
       message.textContent = data.error || "Ошибка при добавлении";
     } else {
-      // красим день только в цвет текущего пользователя
-      cell.classList.add(userColors[userId] || "blue");
+      const color = userColors[userId] || "blue";
+      cell.classList.add(color);
       message.textContent = "Смена добавлена!";
     }
   } catch (err) {
-    debug.innerText += `Ошибка при добавлении дня: ${err}\n`;
+    console.error("Ошибка при добавлении дня:", err);
     message.textContent = "Ошибка сети";
   }
 }
