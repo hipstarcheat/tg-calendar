@@ -19,29 +19,28 @@
 
     #calendar {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); /* адаптивные столбцы */
-      grid-auto-rows: minmax(40px, auto); /* адаптивная высота ячеек */
-      gap: 8px;
+      grid-template-columns: repeat(auto-fill, minmax(28px, 1fr)); /* было 40px → меньше */
+      grid-auto-rows: minmax(28px, auto);
+      gap: 6px; /* чуть меньше отступ */
       margin: 10px auto;
       width: 100%;
-      max-width: 420px; /* можно менять под дизайн */
+      max-width: 380px; /* слегка уменьшил общую ширину */
       box-sizing: border-box;
-      overflow: visible; /* ничего не обрезаем */
-      justify-items: center; /* выравнивание по центру */
+      overflow: visible;
+      justify-items: center;
     }
 
-/* Ячейка дня */
     .day {
       display: flex;
       align-items: center;
       justify-content: center;
-      border-radius: 8px;
+      border-radius: 6px;
       border: 1px solid #ccc;
-      padding: 8px;
+      padding: 4px; /* меньше внутренний отступ */
       cursor: pointer;
       user-select: none;
-      font-size: 16px;
-      aspect-ratio: 1 / 1; /* квадратные ячейки на любых экранах */
+      font-size: 14px; /* уменьшен шрифт */
+      aspect-ratio: 1 / 1;
       transition: background 0.2s, transform 0.1s;
     }
 
