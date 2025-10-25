@@ -3,7 +3,7 @@ tg.expand();
 const user = tg.initDataUnsafe?.user || {};
 const userId = String(user.id);
 
-const apiUrl = "https://script.google.com/macros/s/AKfycbxrM4oWqZ9Z2pn87V2p63QD6FCPRsp2KmRP1YPxG1uMPlzLARdQkgSkuGoNRjr9ifYc/exec";
+const apiUrl = "https://script.google.com/macros/s/AKfycbyM4dyFL7kaMSBe5U7viQXqKl2fSGphhx2psjGLCTFKnGHdsEKM8A7GmPLKjYeD9dgA/exec";
 
 const userColors = {
   "951377763": "blue",
@@ -98,11 +98,12 @@ function renderShiftsList(data) {
 
   myDays.forEach(d => {
     const btn = document.createElement("button");
-    btn.textContent = `День ${d.date}`;
+    btn.textContent = `День ${d.date} | Выручка: ${d.revenue || 0}`;
     btn.onclick = () => handleRevenueInput(d.date);
     shiftsList.appendChild(btn);
   });
 }
+
 
 // === ВВОД ВЫРУЧКИ ===
 async function handleRevenueInput(day) {
