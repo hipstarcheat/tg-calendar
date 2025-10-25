@@ -137,9 +137,9 @@ async function loadSalary() {
   const data = await res.json();
 
   if (data.success) {
-    if (userId === "298802988")
+    if (userId === "578828973")
       salaryInfo.innerHTML = `<h3>ЗП (Влад): ${data.salaryVlad}</h3>`;
-    else if (userId === "578828973")
+    else if (userId === "951377763")
       salaryInfo.innerHTML = `<h3>ЗП (Артур): ${data.salaryArtur}</h3>`;
     else salaryInfo.innerHTML = "";
   }
