@@ -2,12 +2,112 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>График</title>
+  <title>График и Выручка</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f4f7fb;
+      color: #222;
+      padding: 10px;
+    }
+
+    h2, h3 {
+      text-align: center;
+    }
+
+    #calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+      margin: 10px auto;
+      max-width: 320px;
+    }
+
+    .day {
+      background: #fff;
+      border-radius: 8px;
+      padding: 8px;
+      text-align: center;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      transition: 0.2s;
+    }
+
+    .day:hover {
+      background: #eef;
+      transform: scale(1.05);
+    }
+
+    .blue { background-color: #a6c8ff !important; }
+    .green { background-color: #a3f7b5 !important; }
+    .red { background-color: #ffb3b3 !important; }
+    .yellow { background-color: #fff5a6 !important; }
+
+    #legend {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+
+    .color {
+      display: inline-block;
+      width: 15px;
+      height: 15px;
+      margin-right: 5px;
+      border-radius: 3px;
+      vertical-align: middle;
+    }
+
+    .color.blue { background-color: #a6c8ff; }
+    .color.green { background-color: #a3f7b5; }
+    .color.red { background-color: #ffb3b3; }
+    .color.yellow { background-color: #fff5a6; }
+
+    button {
+      display: block;
+      margin: 5px auto;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      background-color: #007aff;
+      color: white;
+      cursor: pointer;
+      font-size: 15px;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      background-color: #005fd1;
+    }
+
+    #debug {
+      font-size: 12px;
+      white-space: pre-wrap;
+      background: #eee;
+      padding: 8px;
+      border-radius: 8px;
+      margin-top: 15px;
+    }
+
+    #message {
+      text-align: center;
+      margin: 10px 0;
+      font-weight: bold;
+    }
+
+    #shiftsList, #salaryInfo {
+      text-align: center;
+      margin-top: 20px;
+    }
+  </style>
 </head>
 <body>
-  <h2>График</h2>
+
+  <h2>График смен</h2>
+
   <div id="calendar"></div>
 
   <div id="legend">
@@ -17,14 +117,10 @@
     <div><span class="color yellow"></span> Замена</div>
   </div>
 
-
   <div id="message"></div>
 
-  <div id="debug"></div>  
-  
-  <p id="message"></p>
+  <div id="debug"></div>
 
   <script src="script.js"></script>
-
 </body>
 </html>

@@ -3,7 +3,7 @@ tg.expand();
 const user = tg.initDataUnsafe?.user || {};
 const userId = String(user.id);
 
-const apiUrl = "https://script.google.com/macros/s/AKfycbxNyQxEMVethlRTZIWac0asTZJZ8BfxPng4YC3KqIr6F7dmM3Lg9CGMuZpkXYSPdusI/exec";
+const apiUrl = "https://script.google.com/macros/s/AKfycbxrM4oWqZ9Z2pn87V2p63QD6FCPRsp2KmRP1YPxG1uMPlzLARdQkgSkuGoNRjr9ifYc/exec";
 
 const userColors = {
   "951377763": "blue",
@@ -16,6 +16,12 @@ const calendar = document.getElementById("calendar");
 const message = document.getElementById("message");
 const debug = document.getElementById("debug");
 
+const shiftsList = document.createElement("div");
+const salaryInfo = document.createElement("div");
+document.body.appendChild(shiftsList);
+document.body.appendChild(salaryInfo);
+
+// генерация календаря
 for (let day = 1; day <= 31; day++) {
   const cell = document.createElement("div");
   cell.className = "day";
@@ -27,89 +33,114 @@ for (let day = 1; day <= 31; day++) {
 async function loadDays() {
   try {
     const res = await fetch(apiUrl);
-    debug.innerText += `GET status: ${res.status}\n`;
     const data = await res.json();
-    debug.innerText += `GET response: ${JSON.stringify(data)}\n`;
 
     data.forEach(item => {
       const cell = [...calendar.children][parseInt(item.date) - 1];
       if (!cell) return;
       const color = userColors[item.userId] || "gray";
-      cell.dataset.userId = item.userId; // запомним владельца дня
+      cell.dataset.userId = item.userId;
       cell.classList.add(color);
     });
+
+    renderShiftsList(data);
+    loadSalary();
   } catch (err) {
-    debug.innerText += `Ошибка при загрузке дней: ${err}\n`;
+    debug.innerText += `Ошибка при загрузке: ${err}\n`;
   }
 }
 
+// обработка клика по дню
 async function handleDayClick(day, cell) {
-  const isOccupied =
-    cell.classList.contains("blue") ||
-    cell.classList.contains("green") ||
-    cell.classList.contains("red") ||
-    cell.classList.contains("yellow");
+  const isOccupied = Object.values(userColors).some(c => cell.classList.contains(c));
 
-  // если день занят
   if (isOccupied) {
-    // если это твоя смена — предлагаем удалить
     if (cell.dataset.userId === String(userId)) {
       const confirmDelete = confirm("Удалить смену?");
       if (confirmDelete) await deleteDay(day, cell);
       return;
     }
-
     message.textContent = "Этот день уже занят!";
     return;
   }
 
-  // иначе — добавляем новую смену
   const body = { action: "addDay", userId, date: String(day) };
 
-  try {
-    const res = await fetch(apiUrl, {
-      method: "POST",
-      body: JSON.stringify(body)
-    });
-    debug.innerText += `POST status: ${res.status}\n`;
-    const data = await res.json();
-    debug.innerText += `POST response: ${JSON.stringify(data)}\n`;
+  const res = await fetch(apiUrl, { method: "POST", body: JSON.stringify(body) });
+  const data = await res.json();
 
-    if (!data.success) {
-      message.textContent = data.error || "Ошибка при добавлении";
-    } else {
-      cell.classList.add(userColors[userId] || "blue");
-      cell.dataset.userId = userId;
-      message.textContent = "Смена добавлена!";
-    }
-  } catch (err) {
-    debug.innerText += `Ошибка при добавлении дня: ${err}\n`;
-    message.textContent = "Ошибка сети";
-  }
+  if (data.success) {
+    cell.classList.add(userColors[userId] || "blue");
+    cell.dataset.userId = userId;
+    message.textContent = "Смена добавлена!";
+    loadDays();
+  } else message.textContent = data.error || "Ошибка";
 }
 
+// удаление смены
 async function deleteDay(day, cell) {
   const body = { action: "deleteDay", userId, date: String(day) };
+  const res = await fetch(apiUrl, { method: "POST", body: JSON.stringify(body) });
+  const data = await res.json();
 
-  try {
-    const res = await fetch(apiUrl, {
-      method: "POST",
-      body: JSON.stringify(body)
-    });
-    debug.innerText += `DELETE status: ${res.status}\n`;
-    const data = await res.json();
-    debug.innerText += `DELETE response: ${JSON.stringify(data)}\n`;
+  if (data.success) {
+    cell.className = "day";
+    delete cell.dataset.userId;
+    message.textContent = "Смена удалена!";
+    loadDays();
+  } else message.textContent = data.error || "Ошибка";
+}
 
-    if (data.success) {
-      cell.className = "day"; // убираем цвет
-      delete cell.dataset.userId;
-      message.textContent = "Смена удалена!";
-    } else {
-      message.textContent = data.error || "Ошибка при удалении";
-    }
-  } catch (err) {
-    debug.innerText += `Ошибка при удалении дня: ${err}\n`;
-    message.textContent = "Ошибка сети";
+// === СПИСОК СМЕН ===
+function renderShiftsList(data) {
+  const myDays = data.filter(d => d.userId === userId);
+  shiftsList.innerHTML = "<h3>Мои смены:</h3>";
+
+  myDays.forEach(d => {
+    const btn = document.createElement("button");
+    btn.textContent = `День ${d.date}`;
+    btn.onclick = () => handleRevenueInput(d.date);
+    shiftsList.appendChild(btn);
+  });
+}
+
+// === ВВОД ВЫРУЧКИ ===
+async function handleRevenueInput(day) {
+  const sum = prompt(`Введите выручку за ${day} число:`);
+
+  if (!sum || isNaN(sum)) return alert("Введите число!");
+
+  const body = {
+    action: "addRevenue",
+    userId,
+    date: String(day),
+    sum: Number(sum)
+  };
+
+  const res = await fetch(apiUrl, {
+    method: "POST",
+    body: JSON.stringify(body)
+  });
+
+  const data = await res.json();
+  if (data.success) {
+    alert("Выручка записана!");
+    loadSalary();
+  } else alert(data.error || "Ошибка при записи");
+}
+
+// === ЗАГРУЗКА ЗП ===
+async function loadSalary() {
+  const body = { action: "getSalary" };
+  const res = await fetch(apiUrl, { method: "POST", body: JSON.stringify(body) });
+  const data = await res.json();
+
+  if (data.success) {
+    if (userId === "951377763")
+      salaryInfo.innerHTML = `<h3>ЗП (Влад): ${data.salaryVlad}</h3>`;
+    else if (userId === "578828973")
+      salaryInfo.innerHTML = `<h3>ЗП (Артур): ${data.salaryArtur}</h3>`;
+    else salaryInfo.innerHTML = "";
   }
 }
 
