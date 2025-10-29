@@ -1,41 +1,187 @@
+/* ========== БАЗОВЫЕ ========== */
 body {
   font-family: sans-serif;
   margin: 10px;
-  background-color: #ffffff; /* белый фон */
-  color: #000000; /* чёрный текст */
+  background-color: #ffffff;
+  color: #000000;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+/* ========== СТРАНИЦЫ (если используешь вкладки) ========== */
+.page {
+  display: none;
+  padding-bottom: 78px; /* место под нижний бар */
+}
+
+.page.active {
+  display: block;
+}
+
+/* ========== КАЛЕНДАРЬ (grid — корректный перенос рядами) ========== */
 #calendar {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr); /* 7 столбцов */
+  gap: 6px;
+  margin: 10px auto;
   max-width: 400px;
+  width: 100%;
+  box-sizing: border-box;
+  justify-items: center;
+  align-items: stretch;
 }
 
+/* уменьшенные квадраты — ~30% меньше исходных 40px */
 .day {
-  width: 40px;
-  height: 40px;
+  width: 28px;
+  height: 28px;
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  margin: 2px;
-  border-radius: 4px;
+  border-radius: 6px;
   border: 1px solid #ccc;
   cursor: pointer;
   user-select: none;
+  font-size: 12px;
+  line-height: 1;
+  box-sizing: border-box;
+  transition: transform .12s ease, background .12s ease, box-shadow .12s ease;
 }
 
+/* hover/tap feedback */
+.day:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.06);
+}
+
+/* Цвета (как в твоём варианте, с хорошей читаемостью) */
 .day.blue { background-color: #3b82f6; color: #ffffff; }
 .day.green { background-color: #10b981; color: #ffffff; }
 .day.red { background-color: #ef4444; color: #ffffff; }
 .day.yellow { background-color: #facc15; color: #000000; }
 
+/* если нужно показать чужой/неизвестный — серый */
+.day.gray { background-color: #e6e6e6; color: #333; }
+
+/* ========== ЛЕГЕНДА ========== */
+#legend {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 10px 0 14px 0;
+  font-size: 13px;
+  align-items: center;
+}
+
+#legend div {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #333;
+}
+
+/* цветные квадратики в легенде */
+.color {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid rgba(0,0,0,0.06);
+}
+.color.blue { background-color: #3b82f6; }
+.color.green { background-color: #10b981; }
+.color.red { background-color: #ef4444; }
+.color.yellow { background-color: #facc15; }
+
+/* ========== СООБЩЕНИЯ И ОТЛАДКА ========== */
 #message {
   margin-top: 10px;
-  color: red;
+  color: #d32f2f; /* по умолчанию красный для ошибок */
+  text-align: center;
+  font-weight: 600;
 }
+
+/* если нужно обычное сообщение — класс success можно ставить в JS */
+#message.success { color: #10723a; }
 
 #debug {
   margin-top: 10px;
-  color: orange;
+  color: #ff8c00;
   white-space: pre-wrap;
+  font-size: 12px;
+  background: #fff8e6;
+  padding: 8px;
+  border-radius: 6px;
+  display: none; /* скрыть по умолчанию — показывай через JS, если нужно */
 }
+
+/* ========== КНОПКИ ========== */
+button {
+  display: inline-block;
+  margin: 6px auto;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  background-color: #007aff;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background .15s ease;
+}
+
+button:hover { background-color: #005fd1; }
+
+/* ========== НИЖНИЙ БАР ========== */
+.bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: #ffffff;
+  border-top: 1px solid #e6e6e6;
+  display: flex;
+  justify-content: space-around;
+  padding: 8px 6px;
+  z-index: 1000;
+  box-shadow: 0 -4px 12px rgba(0,0,0,0.03);
+}
+
+.bottom-bar button {
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: #666;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 6px;
+}
+
+.bottom-bar button.active {
+  color: #007aff;
+  font-weight: 700;
+}
+
+/* немного увеличим tappable area на мобильных экранах */
+.bottom-bar button span { font-size: 11px; }
+
+/* ========== АДАПТИВ ========== */
+@media (max-width: 420px) {
+  #calendar { max-width: 320px; gap: 4px; }
+  .day { width: 24px; height: 24px; font-size: 11px; border-radius: 5px; }
+  #legend { gap: 8px; font-size: 12px; }
+  .bottom-bar { padding: 6px 4px; }
+  .bottom-bar button span { display: none; } /* экономим место: показываем только иконки/эмодзи */
+}
+
+@media (min-width: 900px) {
+  /* на больших экранах чуть увеличим квадратики */
+  .day { width: 32px; height: 32px; font-size: 13px; }
+  #calendar { max-width: 560px; gap: 8px; }
+}
+
+/* ========== УТИЛИТЫ ========== */
+.hidden { display: none !important; }
+.center { text-align: center; }
