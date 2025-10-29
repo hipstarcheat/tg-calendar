@@ -1,13 +1,17 @@
 // script.js — интеграция вкладок, календаря и раздела "Приемка"
+// Особенности:
+// 1) чтение данных делаем через JSONP (doGet в GAS поддерживает callback)
+// 2) запись (addDay, deleteDay, addRevenue, sendPriemkaMessage) — через tg.sendData (Telegram WebApp),
+//    если TG не доступен — пытаем fetch (fallback, но обычно упадёт из-за CORS).
 (function () {
-  // Telegram
   const tg = window.Telegram?.WebApp;
   if (tg && typeof tg.expand === "function") tg.expand();
 
   const user = tg?.initDataUnsafe?.user || {};
   const userId = String(user.id || "");
 
-  const apiUrl = "https://script.google.com/macros/s/AKfycbzyfkP53tVjkz61FdwcmhynfgLgRf3_tr4J6lB5-h1j4BbOAJ0KgQKxygu6zf9ZeYjL/exec";
+  // URL скрипта GAS (тот же /exec URL)
+  const apiUrl = "https://script.google.com/macros/s/AKfycbyWuR7tVom19MXM11wPzusNEW1db3I4Ok_OLLFrYHU_hJMENCZXDvxq4s1WbDAlY_Ro/exec";
 
   const userColors = {
     "951377763": "blue",
@@ -16,22 +20,20 @@
     "222222": "yellow"
   };
 
+  // DOM
   const calendar = document.getElementById("calendar");
   const message = document.getElementById("message");
   const debug = document.getElementById("debug");
-
-  // контейнеры вкладки "График"
   const pageGrafik = document.getElementById("page-grafik");
+  const pagePriemka = document.getElementById("page-acceptance");
 
-  // создаём блоки для списка смен и ЗП внутри вкладки "График"
+  // blocks for Grafik
   const shiftsList = document.createElement("div");
   shiftsList.id = "shiftsList";
   shiftsList.style.marginTop = "12px";
   const salaryInfo = document.createElement("div");
   salaryInfo.id = "salaryInfo";
   salaryInfo.style.marginTop = "12px";
-
-  // вставим их под календарём внутри страницы "График"
   if (pageGrafik) {
     pageGrafik.appendChild(shiftsList);
     pageGrafik.appendChild(salaryInfo);
@@ -40,24 +42,25 @@
     document.body.appendChild(salaryInfo);
   }
 
-  // Приемка: контейнер (вкладка "Приемка" в index.html называется page-acceptance)
-  const pagePriemka = document.getElementById("page-acceptance");
-  const priemkaListContainer = document.createElement("div");
-  priemkaListContainer.id = "priemkaList";
-  priemkaListContainer.style.marginTop = "8px";
-  const priemkaMessage = document.createElement("div");
-  priemkaMessage.id = "priemkaMessage";
-  priemkaMessage.style.marginTop = "10px";
-  priemkaMessage.style.textAlign = "center";
-  if (pagePriemka) {
-    pagePriemka.appendChild(priemkaListContainer);
-    pagePriemka.appendChild(priemkaMessage);
-  } else {
-    document.body.appendChild(priemkaListContainer);
-    document.body.appendChild(priemkaMessage);
-  }
+  // Priemka containers (if not present in HTML, will be appended)
+  const priemkaListElem = document.getElementById("priemkaList") || (function () {
+    const el = document.createElement("div");
+    el.id = "priemkaList";
+    if (pagePriemka) pagePriemka.appendChild(el);
+    else document.body.appendChild(el);
+    return el;
+  })();
+  const priemkaMsgElem = document.getElementById("priemkaMessage") || (function () {
+    const el = document.createElement("div");
+    el.id = "priemkaMessage";
+    el.style.marginTop = "10px";
+    el.style.textAlign = "center";
+    if (pagePriemka) pagePriemka.appendChild(el);
+    else document.body.appendChild(el);
+    return el;
+  })();
 
-  // --- Утилиты debug / UI ---
+  // --- helpers ---
   function dbg(...args) {
     if (!debug) return;
     const t = new Date().toLocaleTimeString();
@@ -71,10 +74,48 @@
     message.className = cls ? cls : "";
   }
 
-  // --- Создаём календарь (один раз) ---
+  // --- tg.sendData helper (for writes) ---
+  function sendViaTG(payload) {
+    try {
+      if (window.Telegram?.WebApp && typeof window.Telegram.WebApp.sendData === "function") {
+        window.Telegram.WebApp.sendData(JSON.stringify(payload));
+        dbg("sendData via TG:", payload);
+        return true;
+      }
+    } catch (e) {
+      dbg("sendViaTG error:", e);
+    }
+    return false;
+  }
+
+  // --- JSONP loader for GET (to avoid CORS) ---
+  function loadJsonp(url, callbackName, onData, onError) {
+    window[callbackName] = function (data) {
+      try {
+        onData && onData(data);
+      } finally {
+        // cleanup
+        try { delete window[callbackName]; } catch (e) { window[callbackName] = undefined; }
+        const s = document.getElementById(callbackName + "_script");
+        if (s) s.remove();
+      }
+    };
+    const script = document.createElement("script");
+    script.id = callbackName + "_script";
+    // do not double-add callback param if already
+    script.src = url + (url.indexOf('?') === -1 ? '?' : '&') + "callback=" + callbackName;
+    script.onerror = function (e) {
+      onError && onError(e);
+      try { delete window[callbackName]; } catch (e) { window[callbackName] = undefined; }
+      script.remove();
+    };
+    document.head.appendChild(script);
+  }
+
+  // --- Calendar build & helpers ---
   function createCalendarIfNeeded() {
     if (!calendar) return;
-    if (calendar.children.length > 0) return; // уже создан
+    if (calendar.children.length > 0) return;
     for (let day = 1; day <= 31; day++) {
       const cell = document.createElement("div");
       cell.className = "day";
@@ -85,7 +126,6 @@
     }
   }
 
-  // --- Закрашивание ячейки ---
   function markCellByUser(cell, uid) {
     if (!cell) return;
     cell.classList.remove("blue", "green", "red", "yellow", "gray");
@@ -94,18 +134,15 @@
     cell.dataset.userId = String(uid);
   }
 
-  // --- Применение массива дней в календарь ---
   function applyDaysData(items) {
     if (!Array.isArray(items)) {
       dbg("applyDaysData: неверный формат", items);
       return;
     }
-    // очистка всех
     [...calendar.children].forEach(c => {
       c.classList.remove("blue", "green", "red", "yellow", "gray");
       delete c.dataset.userId;
     });
-
     items.forEach(item => {
       const d = parseInt(item.date, 10);
       if (!d || d < 1 || d > 31) return;
@@ -115,53 +152,38 @@
     });
   }
 
-  // --- Загрузка дней (fetch) с fallback на initDataUnsafe ---
-  async function loadDays() {
+  // --- LOAD DAYS via JSONP (uses doGet?action=getDays) ---
+  function loadDays() {
     createCalendarIfNeeded();
     showMessage("Загрузка...", "");
-    // Попытка через fetch (если apiUrl задан)
-    if (apiUrl) {
-      try {
-        dbg("Попытка GET ->", apiUrl);
-        const res = await fetch(apiUrl, { method: "GET", cache: "no-store" });
-        dbg("GET status:", res.status);
-        if (!res.ok) throw new Error("Status " + res.status);
-        const data = await res.json();
-        dbg("GET response:", data);
-        applyDaysData(data);
-        renderShiftsList(data);
-        await loadSalary(); // обновим ЗП
+    const cb = "cbDays_" + Date.now();
+    const url = apiUrl + "?action=getDays";
+    loadJsonp(url, cb, function (data) {
+      dbg("JSONP getDays:", data);
+      applyDaysData(data);
+      renderShiftsList(data);
+      loadSalary(); // will use JSONP as well
+      showMessage("", "");
+    }, function (err) {
+      dbg("JSONP getDays failed:", err);
+      // fallback to initDataUnsafe if available
+      if (tg && tg.initDataUnsafe && Array.isArray(tg.initDataUnsafe.days)) {
+        dbg("fallback to initDataUnsafe.days");
+        applyDaysData(tg.initDataUnsafe.days);
+        renderShiftsList(tg.initDataUnsafe.days);
+        loadSalary();
         showMessage("", "");
         return;
-      } catch (err) {
-        dbg("fetch GET failed:", err);
-        // попробуем fallback ниже
       }
-    } else {
-      dbg("apiUrl не указан, пропускаем fetch");
-    }
-
-    // fallback: tg.initDataUnsafe.days
-    if (tg && tg.initDataUnsafe && Array.isArray(tg.initDataUnsafe.days)) {
-      dbg("Используем initDataUnsafe.days:", tg.initDataUnsafe.days);
-      applyDaysData(tg.initDataUnsafe.days);
-      renderShiftsList(tg.initDataUnsafe.days);
-      await loadSalary();
-      showMessage("", "");
-      return;
-    }
-
-    // ничего не получилось
-    showMessage("Нет данных: проверь деплой GAS и URL в настройках WebApp бота.", "error");
-    dbg("Нет данных для загрузки (fetch и initDataUnsafe отсутствуют).");
+      showMessage("Не удалось загрузить данные (JSONP).", "error");
+    });
   }
 
-  // --- Обработка клика по дню ---
+  // --- handle click (write) ---
   async function handleDayClick(day, cell) {
     if (!cell) return;
     const occupied = ["blue", "green", "red", "yellow"].some(c => cell.classList.contains(c));
     if (occupied) {
-      // если занят текущим пользователем — дать опцию удалить
       if (cell.dataset.userId === String(userId)) {
         if (confirm("Удалить смену?")) {
           await deleteDay(day, cell);
@@ -172,22 +194,31 @@
       return;
     }
 
-    const body = { action: "addDay", userId, date: String(day) };
+    const payload = { action: "addDay", userId, date: String(day) };
 
-    // Отправляем POST
+    // send via TG if possible (bypasses CORS)
+    if (sendViaTG(payload)) {
+      // optimistic UI: mark locally and ask user to wait for bot->GAS processing
+      markCellByUser(cell, userId);
+      showMessage("Смена отправлена (через TG).", "success");
+      dbg("Optimistic addDay applied locally");
+      return;
+    }
+
+    // fallback: try fetch POST (may fail due to CORS)
     try {
-      dbg("POST addDay ->", body);
+      dbg("POST addDay fallback ->", payload);
       const res = await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
       dbg("POST response:", data);
       if (data && data.success) {
         markCellByUser(cell, userId);
         showMessage("Смена добавлена!", "success");
-        await loadDays();
+        loadDays();
       } else {
         showMessage(data?.error || "Ошибка при добавлении", "error");
       }
@@ -197,23 +228,29 @@
     }
   }
 
-  // --- Удаление смены ---
+  // --- deleteDay ---
   async function deleteDay(day, cell) {
-    const body = { action: "deleteDay", userId, date: String(day) };
+    const payload = { action: "deleteDay", userId, date: String(day) };
+    if (sendViaTG(payload)) {
+      // optimistic
+      cell.className = "day";
+      delete cell.dataset.userId;
+      showMessage("Запрос удаления отправлен через TG.", "success");
+      return;
+    }
     try {
-      dbg("POST deleteDay ->", body);
+      dbg("POST deleteDay fallback ->", payload);
       const res = await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
-      dbg("delete response:", data);
       if (data && data.success) {
         cell.className = "day";
         delete cell.dataset.userId;
         showMessage("Смена удалена!", "success");
-        await loadDays();
+        loadDays();
       } else {
         showMessage(data?.error || "Ошибка при удалении", "error");
       }
@@ -223,7 +260,7 @@
     }
   }
 
-  // === СПИСОК СМЕН ===
+  // === Shifts list ===
   function renderShiftsList(data) {
     shiftsList.innerHTML = "<h3 style='margin:6px 0 8px 0; text-align:center;'>Мои смены</h3>";
     const myDays = Array.isArray(data) ? data.filter(d => String(d.userId) === String(userId)) : [];
@@ -242,25 +279,30 @@
     });
   }
 
-  // === ВВОД ВЫРУЧКИ ===
+  // === handleRevenueInput (write) ===
   async function handleRevenueInput(day) {
     const sum = prompt(`Введите выручку за ${day} число:`);
-    if (sum === null) return; // отмена
+    if (sum === null) return;
     if (String(sum).trim() === "" || isNaN(Number(sum))) return alert("Введите корректное число!");
-    const body = { action: "addRevenue", userId, date: String(day), sum: Number(sum) };
+    const payload = { action: "addRevenue", userId, date: String(day), sum: Number(sum) };
+
+    if (sendViaTG(payload)) {
+      alert("Выручка отправлена через TG (ожидает обработки).");
+      return;
+    }
+
     try {
-      dbg("POST addRevenue ->", body);
+      dbg("POST addRevenue fallback ->", payload);
       const res = await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
-      dbg("addRevenue response:", data);
       if (data && data.success) {
         alert("Выручка записана!");
-        await loadSalary();
-        await loadDays(); // обновим отображение (если используется поле revenue)
+        loadSalary();
+        loadDays();
       } else {
         alert(data?.error || "Ошибка при записи выручки");
       }
@@ -270,18 +312,12 @@
     }
   }
 
-  // === ЗАГРУЗКА ЗП (getSalary) ===
-  async function loadSalary() {
-    try {
-      const body = { action: "getSalary" };
-      dbg("POST getSalary ->", body);
-      const res = await fetch(apiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
-      });
-      const data = await res.json();
-      dbg("getSalary response:", data);
+  // === loadSalary via JSONP (action=getSalary) ===
+  function loadSalary() {
+    const cb = "cbSalary_" + Date.now();
+    const url = apiUrl + "?action=getSalary";
+    loadJsonp(url, cb, function (data) {
+      dbg("JSONP getSalary:", data);
       if (data && data.success) {
         if (userId === "578828973") salaryInfo.innerHTML = `<h3 style="text-align:center;">ЗП (Влад): ${data.salaryVlad}</h3>`;
         else if (userId === "951377763") salaryInfo.innerHTML = `<h3 style="text-align:center;">ЗП (Артур): ${data.salaryArtur}</h3>`;
@@ -289,30 +325,28 @@
       } else {
         salaryInfo.innerHTML = "";
       }
-    } catch (err) {
-      dbg("loadSalary failed:", err);
+    }, function (err) {
+      dbg("JSONP getSalary failed:", err);
       salaryInfo.innerHTML = "";
-    }
+    });
   }
 
-  // === ПРИЕМКА ===
-  async function loadPriemka() {
-    const list = document.getElementById("priemkaList");
-    const msg = document.getElementById("priemkaMessage");
+  // === Priemka load (JSONP) ===
+  function loadPriemka() {
+    const list = priemkaListElem;
+    const msg = priemkaMsgElem;
     if (!list || !msg) return;
     list.innerHTML = "<p style='text-align:center;color:#666;margin:8px 0;'>Загрузка...</p>";
     msg.textContent = "";
 
-    try {
-      const res = await fetch(apiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "getPriemka" })
-      });
-      const data = await res.json();
-      dbg("getPriemka response:", data);
-      if (!data || !data.success) throw new Error(data?.error || "Ошибка загрузки Приемки");
-
+    const cb = "cbPriemka_" + Date.now();
+    const url = apiUrl + "?action=getPriemka";
+    loadJsonp(url, cb, function (data) {
+      dbg("JSONP getPriemka:", data);
+      if (!data || !data.success) {
+        list.innerHTML = `<p style='color:red;text-align:center;'>Ошибка: ${data?.error || "Неизвестный ответ"}</p>`;
+        return;
+      }
       const items = data.items || [];
       list.innerHTML = "";
       items.forEach((it, idx) => {
@@ -348,11 +382,11 @@
             row.style.backgroundColor = "";
             label.style.color = "";
           } else if (val === target) {
-            row.style.backgroundColor = "#d1fae5"; // зелёный фон
+            row.style.backgroundColor = "#d1fae5";
             label.style.color = "#000";
           } else {
             row.style.backgroundColor = "";
-            label.style.color = "#6b021a"; // бордовый текст
+            label.style.color = "#6b021a";
           }
           checkPriemkaCompletion();
         });
@@ -361,11 +395,10 @@
         row.appendChild(input);
         list.appendChild(row);
       });
-
-    } catch (err) {
-      dbg("loadPriemka failed:", err);
-      list.innerHTML = `<p style='color:red;text-align:center;'>Ошибка: ${err.message}</p>`;
-    }
+    }, function (err) {
+      dbg("JSONP getPriemka failed:", err);
+      list.innerHTML = `<p style='color:red;text-align:center;'>Ошибка загрузки приемки</p>`;
+    });
   }
 
   function checkPriemkaCompletion() {
@@ -377,54 +410,44 @@
       const target = Number(r.dataset.target);
       if (String(input.value).trim() === "" || Number(input.value) !== target) allMatched = false;
     });
-
-    const msg = document.getElementById("priemkaMessage");
+    const msg = priemkaMsgElem;
     if (allMatched) {
       msg.textContent = "Приемка совпала!";
       msg.style.color = "green";
-      sendPriemkaSuccess(); // шлём уведомление через GAS
+      // send message via TG if possible, otherwise try fetch (may fail CORS)
+      const payload = { action: "sendPriemkaMessage" };
+      if (sendViaTG(payload)) {
+        dbg("sendPriemkaMessage sent via TG");
+      } else {
+        // fallback POST
+        fetch(apiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        }).then(r => r.json()).then(d => dbg("sendPriemkaMessage fallback:", d)).catch(e => dbg("sendPriemkaMessage fallback failed:", e));
+      }
     } else {
       msg.textContent = "";
     }
   }
 
-  async function sendPriemkaSuccess() {
-    try {
-      dbg("POST sendPriemkaMessage ->");
-      const res = await fetch(apiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "sendPriemkaMessage" })
-      });
-      const data = await res.json();
-      dbg("sendPriemkaMessage response:", data);
-      // не критично, просто логируем
-    } catch (err) {
-      dbg("sendPriemkaMessage failed:", err);
-    }
-  }
-
-  // --- Переключение вкладок (нижний бар) ---
+  // --- bottom tab switching (keeps existing setup) ---
   function setupTabSwitching() {
     const navButtons = document.querySelectorAll(".bottom-bar button[data-page]");
     if (!navButtons || navButtons.length === 0) return;
     navButtons.forEach(btn => {
       btn.addEventListener("click", () => {
         const pageId = btn.getAttribute("data-page");
-        // переключаем активную страницу
         document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
         const target = document.getElementById(pageId);
         if (target) target.classList.add("active");
-        // переключаем класс active у кнопок
         document.querySelectorAll(".bottom-bar button").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
 
-        // если перешли на график — обновим календарь
         if (pageId === "page-grafik") {
           createCalendarIfNeeded();
           loadDays();
         }
-        // если перешли на приемку — загрузим Приемку
         if (pageId === "page-acceptance") {
           loadPriemka();
         }
@@ -432,18 +455,16 @@
     });
   }
 
-  // --- Инициализация ---
+  // --- init ---
   function init() {
     createCalendarIfNeeded();
     setupTabSwitching();
-    // если первая вкладка активна — загрузим сразу
     const activePage = document.querySelector(".page.active");
     if (activePage && activePage.id === "page-grafik") {
       loadDays();
     }
   }
 
-  // запускаем
   init();
 
 })();
