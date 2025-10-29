@@ -5,7 +5,7 @@
   const user = tg?.initDataUnsafe?.user || {};
   const userId = String(user.id || "");
 
-  const apiUrl = "https://script.google.com/macros/s/AKfycbyWuR7tVom19MXM11wPzusNEW1db3I4Ok_OLLFrYHU_hJMENCZXDvxq4s1WbDAlY_Ro/exec";
+  const apiUrl = "https://script.google.com/macros/s/AKfycbzieJyfxuCbBevWA_rFo4wO9xe8wQR4kZXF5G8ae6Aw6rwM-YmwhRjV7w-O9-DR_87G/exec";
 
   const userColors = {
     "951377763": "blue",
