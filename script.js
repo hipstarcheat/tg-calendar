@@ -1,4 +1,4 @@
-// script.js — аккуратно интегрирован с вкладками и календарём
+// script.js — интеграция вкладок, календаря и раздела "Приемка"
 (function () {
   // Telegram
   const tg = window.Telegram?.WebApp;
@@ -7,7 +7,7 @@
   const user = tg?.initDataUnsafe?.user || {};
   const userId = String(user.id || "");
 
-  const apiUrl = "https://script.google.com/macros/s/AKfycbyM4dyFL7kaMSBe5U7viQXqKl2fSGphhx2psjGLCTFKnGHdsEKM8A7GmPLKjYeD9dgA/exec";
+  const apiUrl = "https://script.google.com/macros/s/AKfycbzyfkP53tVjkz61FdwcmhynfgLgRf3_tr4J6lB5-h1j4BbOAJ0KgQKxygu6zf9ZeYjL/exec";
 
   const userColors = {
     "951377763": "blue",
@@ -36,9 +36,25 @@
     pageGrafik.appendChild(shiftsList);
     pageGrafik.appendChild(salaryInfo);
   } else {
-    // fallback, если структура другая
     document.body.appendChild(shiftsList);
     document.body.appendChild(salaryInfo);
+  }
+
+  // Приемка: контейнер (вкладка "Приемка" в index.html называется page-acceptance)
+  const pagePriemka = document.getElementById("page-acceptance");
+  const priemkaListContainer = document.createElement("div");
+  priemkaListContainer.id = "priemkaList";
+  priemkaListContainer.style.marginTop = "8px";
+  const priemkaMessage = document.createElement("div");
+  priemkaMessage.id = "priemkaMessage";
+  priemkaMessage.style.marginTop = "10px";
+  priemkaMessage.style.textAlign = "center";
+  if (pagePriemka) {
+    pagePriemka.appendChild(priemkaListContainer);
+    pagePriemka.appendChild(priemkaMessage);
+  } else {
+    document.body.appendChild(priemkaListContainer);
+    document.body.appendChild(priemkaMessage);
   }
 
   // --- Утилиты debug / UI ---
@@ -52,7 +68,6 @@
   function showMessage(text, cls) {
     if (!message) return;
     message.textContent = text || "";
-    // классы можно использовать для стилизации success/error
     message.className = cls ? cls : "";
   }
 
@@ -280,6 +295,115 @@
     }
   }
 
+  // === ПРИЕМКА ===
+  async function loadPriemka() {
+    const list = document.getElementById("priemkaList");
+    const msg = document.getElementById("priemkaMessage");
+    if (!list || !msg) return;
+    list.innerHTML = "<p style='text-align:center;color:#666;margin:8px 0;'>Загрузка...</p>";
+    msg.textContent = "";
+
+    try {
+      const res = await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "getPriemka" })
+      });
+      const data = await res.json();
+      dbg("getPriemka response:", data);
+      if (!data || !data.success) throw new Error(data?.error || "Ошибка загрузки Приемки");
+
+      const items = data.items || [];
+      list.innerHTML = "";
+      items.forEach((it, idx) => {
+        const row = document.createElement("div");
+        row.className = "priemka-row";
+        row.style.display = "flex";
+        row.style.alignItems = "center";
+        row.style.justifyContent = "space-between";
+        row.style.padding = "6px";
+        row.style.margin = "6px 4px";
+        row.style.borderRadius = "8px";
+        row.style.border = "1px solid #e6e6e6";
+        row.dataset.target = String(it.value);
+
+        const label = document.createElement("div");
+        label.textContent = it.name;
+        label.style.flex = "1";
+        label.style.marginRight = "8px";
+
+        const input = document.createElement("input");
+        input.type = "number";
+        input.min = 1;
+        input.max = 20;
+        input.value = "";
+        input.style.width = "64px";
+        input.style.textAlign = "center";
+        input.dataset.index = String(idx);
+
+        input.addEventListener("input", () => {
+          const target = Number(row.dataset.target);
+          const val = Number(input.value);
+          if (input.value === "") {
+            row.style.backgroundColor = "";
+            label.style.color = "";
+          } else if (val === target) {
+            row.style.backgroundColor = "#d1fae5"; // зелёный фон
+            label.style.color = "#000";
+          } else {
+            row.style.backgroundColor = "";
+            label.style.color = "#6b021a"; // бордовый текст
+          }
+          checkPriemkaCompletion();
+        });
+
+        row.appendChild(label);
+        row.appendChild(input);
+        list.appendChild(row);
+      });
+
+    } catch (err) {
+      dbg("loadPriemka failed:", err);
+      list.innerHTML = `<p style='color:red;text-align:center;'>Ошибка: ${err.message}</p>`;
+    }
+  }
+
+  function checkPriemkaCompletion() {
+    const rows = document.querySelectorAll(".priemka-row");
+    if (!rows || rows.length === 0) return;
+    let allMatched = true;
+    rows.forEach(r => {
+      const input = r.querySelector("input");
+      const target = Number(r.dataset.target);
+      if (String(input.value).trim() === "" || Number(input.value) !== target) allMatched = false;
+    });
+
+    const msg = document.getElementById("priemkaMessage");
+    if (allMatched) {
+      msg.textContent = "Приемка совпала!";
+      msg.style.color = "green";
+      sendPriemkaSuccess(); // шлём уведомление через GAS
+    } else {
+      msg.textContent = "";
+    }
+  }
+
+  async function sendPriemkaSuccess() {
+    try {
+      dbg("POST sendPriemkaMessage ->");
+      const res = await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "sendPriemkaMessage" })
+      });
+      const data = await res.json();
+      dbg("sendPriemkaMessage response:", data);
+      // не критично, просто логируем
+    } catch (err) {
+      dbg("sendPriemkaMessage failed:", err);
+    }
+  }
+
   // --- Переключение вкладок (нижний бар) ---
   function setupTabSwitching() {
     const navButtons = document.querySelectorAll(".bottom-bar button[data-page]");
@@ -299,6 +423,10 @@
         if (pageId === "page-grafik") {
           createCalendarIfNeeded();
           loadDays();
+        }
+        // если перешли на приемку — загрузим Приемку
+        if (pageId === "page-acceptance") {
+          loadPriemka();
         }
       });
     });
