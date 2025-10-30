@@ -5,8 +5,7 @@
   const user = tg?.initDataUnsafe?.user || {};
   const userId = String(user.id || "");
 
-  // === Прямая ссылка на GAS ===
-  const apiUrl = "https://script.google.com/macros/s/AKfycbzvdslq3ohyZhu2E0kjABLd4HK0hsPhhjuXCC3Yy1DZylBFlrcoZRQXOncz_ZzHsZ0H/exec";
+  const apiUrl = "https://script.google.com/macros/s/AKfycbzJOx6iTvp9hyerIUHRNh-Eun10aSYr4hbQiY20swEts99W9mFn79s5iYX6cyaf_hTt/exec";
 
   const userColors = {
     "951377763": "blue",
@@ -47,31 +46,14 @@
     return el;
   })();
 
-  function dbg(...args) {
-    if (debug) debug.innerText += `[${new Date().toLocaleTimeString()}] ${args.join(" ")}\n`;
-    console.log(...args);
-  }
+  function dbg(...args) { if (debug) debug.innerText += `[${new Date().toLocaleTimeString()}] ${args.join(" ")}\n`; console.log(...args); }
+  function showMessage(text, cls) { if (!message) return; message.textContent = text || ""; message.className = cls || ""; }
 
-  function showMessage(text, cls) {
-    if (!message) return;
-    message.textContent = text || "";
-    message.className = cls || "";
-  }
-
-  // === Прямая отправка в GAS ===
   async function sendToGAS(payload) {
     try {
-      const res = await fetch(apiUrl, {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      dbg("POST:", payload, "→", data);
-      return data;
-    } catch (e) {
-      dbg("sendToGAS error:", e);
-      return { success: false, error: e.message };
-    }
+      const res = await fetch(apiUrl, { method: "POST", body: JSON.stringify(payload) });
+      return await res.json();
+    } catch (e) { return { success: false, error: e.message }; }
   }
 
   function createCalendarIfNeeded() {
@@ -88,25 +70,18 @@
 
   function markCellByUser(cell, uid) {
     if (!cell) return;
-    cell.classList.remove("blue", "green", "red", "yellow", "gray");
+    cell.classList.remove("blue","green","red","yellow","gray");
     cell.classList.add(userColors[uid] || "gray");
     cell.dataset.userId = String(uid);
   }
 
   function applyDaysData(items) {
-    if (!Array.isArray(items)) {
-      dbg("applyDaysData: неверный формат", items);
-      return;
-    }
-    [...calendar.children].forEach(c => {
-      c.classList.remove("blue", "green", "red", "yellow", "gray");
-      delete c.dataset.userId;
-    });
+    if (!Array.isArray(items)) return;
+    [...calendar.children].forEach(c => { c.className = "day"; delete c.dataset.userId; });
     items.forEach(item => {
       const d = parseInt(item.date, 10);
       if (!d || d < 1 || d > 31) return;
-      const cell = [...calendar.children][d - 1];
-      if (!cell) return;
+      const cell = [...calendar.children][d-1];
       markCellByUser(cell, String(item.userId));
     });
   }
@@ -117,58 +92,36 @@
     try {
       const res = await fetch(apiUrl + "?action=getDays");
       const data = await res.json();
-      dbg("GET getDays:", data);
       applyDaysData(data);
       renderShiftsList(data);
       loadSalary();
       showMessage("");
-    } catch (err) {
-      dbg("loadDays error:", err);
-      showMessage("Ошибка загрузки данных", "error");
-    }
+    } catch (err) { showMessage("Ошибка загрузки данных", "error"); }
   }
 
   async function handleDayClick(day, cell) {
     if (!cell) return;
-    const occupied = ["blue", "green", "red", "yellow"].some(c => cell.classList.contains(c));
-
+    const occupied = ["blue","green","red","yellow"].some(c => cell.classList.contains(c));
     if (occupied) {
       if (cell.dataset.userId === userId && confirm("Удалить смену?")) {
         const res = await sendToGAS({ action: "deleteDay", userId, date: String(day) });
-        if (res.success) {
-          showMessage("Смена удалена", "success");
-          loadDays();
-        } else {
-          showMessage(res.error || "Ошибка удаления", "error");
-        }
+        if (res.success) loadDays();
         return;
       }
-      showMessage("Этот день уже занят!", "error");
       return;
     }
-
     const res = await sendToGAS({ action: "addDay", userId, date: String(day) });
-    if (res.success) {
-      cell.classList.add(userColors[userId] || "blue");
-      showMessage("Смена добавлена", "success");
-    } else {
-      showMessage(res.error || "Ошибка добавления", "error");
-    }
+    if (res.success) loadDays();
   }
 
   function renderShiftsList(data) {
-    shiftsList.innerHTML = "<h3 style='margin:6px 0 8px 0; text-align:center;'>Мои смены</h3>";
+    shiftsList.innerHTML = "<h3 style='text-align:center;'>Мои смены</h3>";
     const myDays = Array.isArray(data) ? data.filter(d => String(d.userId) === userId) : [];
-    if (myDays.length === 0) {
-      shiftsList.innerHTML += "<p style='text-align:center; color:#777; margin:6px 0;'>У тебя пока нет смен</p>";
-      return;
-    }
+    if (!myDays.length) { shiftsList.innerHTML += "<p style='text-align:center;color:#777;'>У тебя пока нет смен</p>"; return; }
     myDays.forEach(d => {
       const btn = document.createElement("button");
       btn.textContent = `День ${d.date} • Выручка: ${d.revenue || 0}`;
-      btn.style.display = "block";
-      btn.style.width = "92%";
-      btn.style.margin = "6px auto";
+      btn.style.display = "block"; btn.style.width = "92%"; btn.style.margin = "6px auto";
       btn.onclick = () => handleRevenueInput(d.date);
       shiftsList.appendChild(btn);
     });
@@ -177,120 +130,87 @@
   async function handleRevenueInput(day) {
     const sum = prompt(`Введите выручку за ${day} число:`);
     if (sum === null || sum.trim() === "" || isNaN(Number(sum))) return alert("Введите корректное число!");
-    const res = await sendToGAS({ action: "addRevenue", userId, date: String(day), sum: Number(sum) });
-    if (res.success) alert("Выручка сохранена");
-    else alert("Ошибка: " + (res.error || "неизвестно"));
+    const res = await sendToGAS({ action:"addRevenue", userId, date: String(day), sum: Number(sum) });
+    if (res.success) loadDays();
   }
 
   async function loadSalary() {
     try {
-      const res = await fetch(apiUrl + "?action=getSalary");
-      const data = await res.json();
-      dbg("getSalary:", data);
+      const res = await fetch(apiUrl + "?action=getSalary"); const data = await res.json();
       if (data?.success) {
         if (userId === "578828973") salaryInfo.innerHTML = `<h3 style="text-align:center;">ЗП (Влад): ${data.salaryVlad}</h3>`;
         else if (userId === "951377763") salaryInfo.innerHTML = `<h3 style="text-align:center;">ЗП (Артур): ${data.salaryArtur}</h3>`;
         else salaryInfo.innerHTML = "";
       }
-    } catch (e) {
-      dbg("loadSalary error:", e);
-    }
+    } catch {}
   }
 
-  // === ПРИЕМКА ===
+  // === Приемка ===
   async function loadPriemka() {
-    priemkaListElem.innerHTML = "<p style='text-align:center;color:#666;margin:8px 0;'>Загрузка...</p>";
+    priemkaListElem.innerHTML = "<p style='text-align:center;color:#666;'>Загрузка...</p>";
     try {
-      const res = await fetch(apiUrl + "?action=getPriemka");
-      const data = await res.json();
-      dbg("getPriemka:", data);
-      if (!data?.success) {
-        priemkaListElem.innerHTML = `<p style='color:red;text-align:center;'>Ошибка: ${data?.error}</p>`;
-        return;
-      }
+      const res = await fetch(apiUrl + "?action=getPriemka"); const data = await res.json();
+      if (!data?.success) { priemkaListElem.innerHTML = `<p style='color:red;text-align:center;'>Ошибка</p>`; return; }
       priemkaListElem.innerHTML = "";
       (data.items || []).forEach(it => {
-        const row = document.createElement("div");
-        row.className = "priemka-row";
-        row.style.display = "flex";
-        row.style.alignItems = "center";
-        row.style.justifyContent = "space-between";
-        row.style.padding = "6px";
-        row.style.margin = "6px 4px";
-        row.style.borderRadius = "8px";
-        row.style.border = "1px solid #e6e6e6";
-        row.dataset.target = String(it.value);
+        const row = document.createElement("div"); row.className = "priemka-row";
+        row.style.display = "flex"; row.style.justifyContent = "space-between"; row.style.padding="6px"; row.style.border="1px solid #e6e6e6"; row.style.margin="6px 4px"; row.style.borderRadius="8px";
 
-        const label = document.createElement("div");
-        label.textContent = it.name;
-        label.style.flex = "1";
-        label.style.marginRight = "8px";
+        const label = document.createElement("div"); label.textContent = it.name; label.style.flex="1"; label.style.marginRight="8px";
 
-        const input = document.createElement("input");
-        input.type = "number";
-        input.min = 1;
-        input.max = 1000;
-        input.value = "";
-        input.style.width = "64px";
-        input.style.textAlign = "center";
+        const input = document.createElement("input"); input.type="number"; input.value = it.value || 0; input.style.width="64px"; input.style.textAlign="center";
 
-        input.addEventListener("input", async () => {
-          await sendToGAS({ action: "updatePriemka", name: it.name, value: Number(input.value) });
+        // Обновление H при вводе
+        input.addEventListener("input", async () => { 
+          await sendToGAS({ action:"updatePriemka", row: it.rowIndex, value: Number(input.value) });
           checkPriemkaCompletion();
         });
 
-        row.appendChild(label);
-        row.appendChild(input);
-        priemkaListElem.appendChild(row);
+        row.appendChild(label); row.appendChild(input); priemkaListElem.appendChild(row);
       });
-    } catch (e) {
-      dbg("loadPriemka error:", e);
-      priemkaListElem.innerHTML = `<p style='color:red;text-align:center;'>Ошибка загрузки</p>`;
-    }
+
+      // после загрузки проверяем заполненные H
+      checkPriemkaCompletion();
+
+    } catch {}
   }
 
   async function checkPriemkaCompletion() {
     const rows = document.querySelectorAll(".priemka-row");
     if (!rows.length) return;
     let allMatched = true;
-    rows.forEach(r => {
-      const input = r.querySelector("input");
-      if (String(input.value).trim() === "" || Number(input.value) !== Number(r.dataset.target))
-        allMatched = false;
+
+    // загружаем G и H из листа приёмки
+    const res = await fetch(apiUrl + "?action=getPriemka");
+    const data = await res.json();
+    if (!data?.success) return;
+
+    rows.forEach((row, i) => {
+      const input = row.querySelector("input");
+      const gValue = data.items[i]?.value || 0; // значение из G
+      if (input.value === "" && gValue !== undefined) input.value = gValue; // если H пусто — подтягиваем
+      if (Number(input.value) !== Number(gValue)) allMatched = false;
     });
+
     if (allMatched) {
-      priemkaMsgElem.textContent = "Приемка совпала!";
-      priemkaMsgElem.style.color = "green";
+      priemkaMsgElem.textContent = "Приемка совпала!"; priemkaMsgElem.style.color="green";
       await sendToGAS({ action: "sendPriemkaMessage" });
     } else priemkaMsgElem.textContent = "";
   }
 
-  // === Переключение вкладок ===
   function setupTabSwitching() {
     document.querySelectorAll(".bottom-bar button[data-page]").forEach(btn => {
       btn.addEventListener("click", () => {
         const pageId = btn.getAttribute("data-page");
         document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
         document.getElementById(pageId)?.classList.add("active");
-        document.querySelectorAll(".bottom-bar button").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-
-        if (pageId === "page-grafik") {
-          createCalendarIfNeeded();
-          loadDays();
-        }
-        if (pageId === "page-acceptance") {
-          loadPriemka();
-        }
+        document.querySelectorAll(".bottom-bar button").forEach(b => b.classList.remove("active")); btn.classList.add("active");
+        if (pageId === "page-grafik") loadDays();
+        if (pageId === "page-acceptance") loadPriemka();
       });
     });
   }
 
-  function init() {
-    createCalendarIfNeeded();
-    setupTabSwitching();
-    if (document.querySelector(".page.active")?.id === "page-grafik") loadDays();
-  }
-
+  function init() { createCalendarIfNeeded(); setupTabSwitching(); if (document.querySelector(".page.active")?.id==="page-grafik") loadDays(); }
   init();
 })();
