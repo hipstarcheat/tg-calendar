@@ -7,12 +7,7 @@
 
   const apiUrl = "https://script.google.com/macros/s/AKfycbzieJyfxuCbBevWA_rFo4wO9xe8wQR4kZXF5G8ae6Aw6rwM-YmwhRjV7w-O9-DR_87G/exec";
 
-  const userColors = {
-    "951377763": "blue",
-    "578828973": "green",
-    "298802988": "red",
-    "222222": "yellow"
-  };
+  const userColors = { "951377763": "blue", "578828973": "green", "298802988": "red", "222222": "yellow" };
 
   const calendar = document.getElementById("calendar");
   const message = document.getElementById("message");
@@ -21,23 +16,14 @@
   const pagePriemka = document.getElementById("page-acceptance");
 
   const shiftsList = document.createElement("div");
-  shiftsList.id = "shiftsList";
-  shiftsList.style.marginTop = "12px";
+  shiftsList.id = "shiftsList"; shiftsList.style.marginTop = "12px";
   const salaryInfo = document.createElement("div");
-  salaryInfo.id = "salaryInfo";
-  salaryInfo.style.marginTop = "12px";
+  salaryInfo.id = "salaryInfo"; salaryInfo.style.marginTop = "12px";
   (pageGrafik || document.body).appendChild(shiftsList);
   (pageGrafik || document.body).appendChild(salaryInfo);
 
-  const priemkaListElem = document.getElementById("priemkaList") || (() => {
-    const el = document.createElement("div"); el.id = "priemkaList";
-    (pagePriemka || document.body).appendChild(el); return el;
-  })();
-  const priemkaMsgElem = document.getElementById("priemkaMessage") || (() => {
-    const el = document.createElement("div"); el.id = "priemkaMessage";
-    el.style.marginTop = "10px"; el.style.textAlign = "center";
-    (pagePriemka || document.body).appendChild(el); return el;
-  })();
+  const priemkaListElem = document.getElementById("priemkaList") || (() => { const el = document.createElement("div"); el.id = "priemkaList"; (pagePriemka || document.body).appendChild(el); return el; })();
+  const priemkaMsgElem = document.getElementById("priemkaMessage") || (() => { const el = document.createElement("div"); el.id = "priemkaMessage"; el.style.marginTop = "10px"; el.style.textAlign = "center"; (pagePriemka || document.body).appendChild(el); return el; })();
 
   function dbg(...args) { if(debug) debug.innerText += `[${new Date().toLocaleTimeString()}] ${args.map(a=>typeof a==="object"?JSON.stringify(a):a).join(" ")}\n`; console.log(...args); }
   function showMessage(text, cls) { if(!message) return; message.textContent = text||""; message.className = cls||""; }
@@ -45,9 +31,7 @@
 
   function loadJsonp(url, callbackName, onData, onError){
     window[callbackName] = function(data){ try{ onData?.(data); } finally{ try{delete window[callbackName];}catch(e){window[callbackName]=undefined;} document.getElementById(callbackName+"_script")?.remove(); } };
-    const s = document.createElement("script");
-    s.id = callbackName+"_script";
-    s.src = url + (url.indexOf("?")===-1?"?":"&")+"callback="+callbackName;
+    const s = document.createElement("script"); s.id = callbackName+"_script"; s.src = url + (url.indexOf("?")===-1?"?":"&")+"callback="+callbackName;
     s.onerror = e=>{ onError?.(e); try{delete window[callbackName];}catch(e){window[callbackName]=undefined;} s.remove(); };
     document.head.appendChild(s);
   }
@@ -84,7 +68,7 @@
   function loadDays(){
     createCalendarIfNeeded();
     showMessage("Загрузка...", "");
-    const cb="cbDays_"+Date.now(); 
+    const cb="cbDays_"+Date.now();
     loadJsonp(apiUrl+"?action=getDays", cb, data=>{
       dbg("JSONP getDays:",data);
       applyDaysData(data);
@@ -97,20 +81,20 @@
     });
   }
 
-  function handleDayClick(day,cell){
+  async function handleDayClick(day,cell){
     if(!cell) return;
     const occupied=["blue","green","red","yellow"].some(c=>cell.classList.contains(c));
     if(occupied){
-      if(cell.dataset.userId===userId && confirm("Удалить смену?")) { deleteDay(day,cell); return; }
+      if(cell.dataset.userId===userId && confirm("Удалить смену?")) { await deleteDay(day,cell); return; }
       showMessage("Этот день уже занят!","error"); return;
     }
     const payload={action:"addDay",userId,date:String(day)};
-    if(sendViaTG(payload)){ showMessage("Смена отправлена через TG, ждите подтверждения GAS.","success"); return; }
+    if(sendViaTG(payload)){ showMessage("Смена отправлена через TG, ждите подтверждения GAS.","success"); }
   }
 
-  function deleteDay(day,cell){
+  async function deleteDay(day,cell){
     const payload={action:"deleteDay",userId,date:String(day)};
-    if(sendViaTG(payload)){ showMessage("Запрос удаления отправлен через TG, ждите подтверждения GAS.","success"); return; }
+    if(sendViaTG(payload)){ showMessage("Запрос удаления отправлен через TG, ждите подтверждения GAS.","success"); }
   }
 
   function renderShiftsList(data){
@@ -130,7 +114,7 @@
     const sum=prompt(`Введите выручку за ${day} число:`); 
     if(sum===null||sum.trim()===""||isNaN(Number(sum))) return alert("Введите корректное число!");
     const payload={action:"addRevenue",userId,date:String(day),sum:Number(sum)};
-    if(sendViaTG(payload)){ alert("Выручка отправлена через TG, ждите обработки GAS."); return; }
+    if(sendViaTG(payload)){ alert("Выручка отправлена через TG, ждите обработки GAS."); }
   }
 
   function loadSalary(){
@@ -175,8 +159,7 @@
       if(String(input.value).trim()==="" || Number(input.value)!==Number(r.dataset.target)) allMatched=false;
     });
     if(allMatched){
-      priemkaMsgElem.textContent="Приемка совпала!";
-      priemkaMsgElem.style.color="green";
+      priemkaMsgElem.textContent="Приемка совпала!"; priemkaMsgElem.style.color="green";
       const payload={action:"sendPriemkaMessage"};
       sendViaTG(payload);
     } else priemkaMsgElem.textContent="";
