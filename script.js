@@ -139,34 +139,41 @@
       const res = await fetch(apiUrl + "?action=getSalary"); const data = await res.json();
       if (data?.success) {
         if (userId === "578828973") salaryInfo.innerHTML = `<h3 style="text-align:center;">ЗП (Влад): ${data.salaryVlad}</h3>`;
-        else if (userId === "298802988") salaryInfo.innerHTML = `<h3 style="text-align:center;">ЗП (Артур): ${data.salaryArtur}</h3>`;
+        else if (userId === "951377763") salaryInfo.innerHTML = `<h3 style="text-align:center;">ЗП (Артур): ${data.salaryArtur}</h3>`;
         else salaryInfo.innerHTML = "";
       }
     } catch {}
   }
 
   // === Приемка ===
+  let priemkaMessageSent = false; // <--- глобальный флаг (один раз за сессию)
+
   async function loadPriemka() {
     priemkaListElem.innerHTML = "<p style='text-align:center;color:#666;'>Загрузка...</p>";
     try {
       const res = await fetch(apiUrl + "?action=getPriemka");
       const data = await res.json();
-      if (!data?.success) { priemkaListElem.innerHTML = `<p style='color:red;text-align:center;'>Ошибка</p>`; return; }
+      if (!data?.success) {
+        priemkaListElem.innerHTML = `<p style='color:red;text-align:center;'>Ошибка</p>`;
+        return;
+      }
+
       priemkaListElem.innerHTML = "";
 
       (data.items || []).forEach(it => {
         const row = document.createElement("div");
         row.className = "priemka-row";
-        row.style.display = "flex";
-        row.style.justifyContent = "space-between";
-        row.style.padding = "6px";
-        row.style.border = "1px solid #e6e6e6";
-        row.style.margin = "6px 4px";
-        row.style.borderRadius = "8px";
+        Object.assign(row.style, {
+          display: "flex",
+          justifyContent: "space-between",
+          padding: "6px",
+          border: "1px solid #e6e6e6",
+          margin: "6px 4px",
+          borderRadius: "8px",
+        });
 
-        // сохраняем целевое G в data-атрибуте
-        row.dataset.g = (it.g === null || it.g === undefined) ? "" : String(it.g);
         row.dataset.rowIndex = String(it.rowIndex);
+        row.dataset.g = (it.g === null || it.g === undefined) ? "" : String(it.g);
 
         const label = document.createElement("div");
         label.textContent = it.name;
@@ -175,12 +182,9 @@
 
         const input = document.createElement("input");
         input.type = "number";
-        // если в H уже есть значение (h !== null), ставим его, иначе оставляем пустоту
         input.value = (it.h === null || it.h === undefined) ? "" : String(it.h);
-        input.style.width = "64px";
-        input.style.textAlign = "center";
+        Object.assign(input.style, { width: "64px", textAlign: "center" });
 
-        // При вводе — отправляем H в GAS (updatePriemka) и затем проверяем совпадения
         input.addEventListener("input", async () => {
           const v = input.value === "" ? null : Number(input.value);
           await sendToGAS({ action: "updatePriemka", row: it.rowIndex, value: v });
@@ -192,7 +196,6 @@
         priemkaListElem.appendChild(row);
       });
 
-      // после загрузки проверяем (подтягиваем пустые H не нужно — H показаны из сервера)
       await checkPriemkaCompletion();
     } catch (err) {
       dbg("loadPriemka error:", err);
@@ -200,50 +203,75 @@
     }
   }
 
+
   async function checkPriemkaCompletion() {
     const rows = Array.from(document.querySelectorAll(".priemka-row"));
-    if (!rows.length) return;
-    let allMatched = true;
+    if (!rows.length) {
+      priemkaMsgElem.textContent = "";
+      return;
+    }
 
-    // Берём свежие значения G и H с сервера, чтобы сравнение было корректным
-    const res = await fetch(apiUrl + "?action=getPriemka");
-    const data = await res.json();
-    if (!data?.success) return;
+    let data;
+    try {
+      const res = await fetch(apiUrl + "?action=getPriemka");
+      data = await res.json();
+      if (!data?.success) return;
+    } catch (e) {
+      dbg("checkPriemkaCompletion: fetch error", e);
+      return;
+    }
 
-    // data.items содержит объекты { rowIndex, name, g, h }
-    // создаём мапу по rowIndex (на случай, если порядок поменяется)
     const map = new Map();
     (data.items || []).forEach(it => map.set(String(it.rowIndex), it));
 
+    let relevantCount = 0;
+    let matchedCount = 0;
+
     rows.forEach(row => {
       const input = row.querySelector("input");
-      const rowIndex = row.dataset.rowIndex;
-      const info = map.get(rowIndex) || {};
-      const gValue = (info.g === null || info.g === undefined) ? null : Number(info.g);
-      const hValue = (input.value === "" ? null : Number(input.value));
+      const info = map.get(row.dataset.rowIndex) || {};
+      const gRaw = info.g;
+      const hRaw = (info.h === null || info.h === undefined) ? null : info.h;
 
-      // если целевое G задано, а H пусто — считаем несовпадением
-      if (gValue === null) {
-        // если нет целевого значения — не учитываем в проверке (или можно считать требующим ручной проверки)
-        allMatched = false;
+      if (gRaw === null || gRaw === undefined || gRaw === "") {
+        row.style.backgroundColor = "";
+        row.style.color = "";
         return;
       }
 
-      // строгая проверка: H обязательно равна G и не null
-      if (hValue === null || Number(hValue) !== Number(gValue)) {
-        allMatched = false;
+      relevantCount++;
+      const gVal = Number(gRaw);
+      const hVal = (hRaw === null || hRaw === undefined)
+        ? (input.value === "" ? null : Number(input.value))
+        : Number(hRaw);
+
+      const match = (hVal !== null && !isNaN(hVal) && Number(gVal) === Number(hVal));
+
+      if (match) {
+        row.style.backgroundColor = "#e9fbe9";
+        row.style.color = "#000";
+        matchedCount++;
+      } else {
+        row.style.backgroundColor = "#fdeaea";
+        row.style.color = "#6b021a";
       }
     });
 
-    if (allMatched) {
-      priemkaMsgElem.textContent = "Приемка совпала!";
+    if (relevantCount > 0 && matchedCount === relevantCount) {
+      priemkaMsgElem.textContent = "✅ Приемка совпала!";
       priemkaMsgElem.style.color = "green";
-      await sendToGAS({ action: "sendPriemkaMessage" });
-    } else {
-      priemkaMsgElem.textContent = "Не совпадает!";
-      priemkaMsgElem.style.color = "red";
-    }
 
+      // отправляем сообщение только 1 раз
+      if (!priemkaMessageSent) {
+        priemkaMessageSent = true;
+        await sendToGAS({ action: "sendPriemkaMessage" });
+      }
+    } else {
+      priemkaMsgElem.textContent = "❌ Не совпадает!";
+      priemkaMsgElem.style.color = "red";
+      // если расхождение — сбрасываем флаг (сообщение снова отправится после reload)
+      priemkaMessageSent = false;
+    }
   }
 
 
