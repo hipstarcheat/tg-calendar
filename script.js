@@ -5,7 +5,7 @@
   const user = tg?.initDataUnsafe?.user || {};
   const userId = String(user.id || "");
 
-  const apiUrl = "https://script.google.com/macros/s/AKfycbzJOx6iTvp9hyerIUHRNh-Eun10aSYr4hbQiY20swEts99W9mFn79s5iYX6cyaf_hTt/exec";
+  const apiUrl = "https://script.google.com/macros/s/AKfycbwygjwa9I0OkfvClWPabpIrHDbH9H-NkgnPN6igTimI8ipW8DkelbTTz_bncnGD_hxP/exec";
 
   const userColors = {
     "951377763": "blue",
@@ -58,7 +58,7 @@
 
   function createCalendarIfNeeded() {
     if (!calendar || calendar.children.length) return;
-    for (let day = 1; day <= 30; day++) {
+    for (let day = 1; day <= 31; day++) {
       const cell = document.createElement("div");
       cell.className = "day";
       cell.textContent = day;
