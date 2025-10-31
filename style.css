@@ -2,7 +2,12 @@
 body {
   font-family: sans-serif;
   margin: 10px;
-  background-color: #130505b0;
+  background-color: #130505b0; /* полупрозрачный тёмный слой поверх фона */
+  background-image: url("back.jpg"); /* путь к твоему изображению */
+  background-size: cover;        /* растягивает картинку на весь экран */
+  background-repeat: no-repeat;  /* не повторяет */
+  background-attachment: fixed;  /* не прокручивается при скролле */
+  background-position: center;   /* центрирует */
   color: #813f01;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
