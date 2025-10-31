@@ -139,7 +139,7 @@
       const res = await fetch(apiUrl + "?action=getSalary"); const data = await res.json();
       if (data?.success) {
         if (userId === "578828973") salaryInfo.innerHTML = `<h3 style="text-align:center;">ЗП (Влад): ${data.salaryVlad}</h3>`;
-        else if (userId === "951377763") salaryInfo.innerHTML = `<h3 style="text-align:center;">ЗП (Артур): ${data.salaryArtur}</h3>`;
+        else if (userId === "298802988") salaryInfo.innerHTML = `<h3 style="text-align:center;">ЗП (Артур): ${data.salaryArtur}</h3>`;
         else salaryInfo.innerHTML = "";
       }
     } catch {}
