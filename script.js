@@ -5,7 +5,7 @@
   const user = tg?.initDataUnsafe?.user || {};
   const userId = String(user.id || "");
 
-  const apiUrl = "https://script.google.com/macros/s/AKfycbwygjwa9I0OkfvClWPabpIrHDbH9H-NkgnPN6igTimI8ipW8DkelbTTz_bncnGD_hxP/exec";
+  const apiUrl = "https://script.google.com/macros/s/AKfycbxKFN4S613Fhod01BiY1fXfxRvhK-HFJLi3y65pXZTlwM-c7jQ2Gf2i_Bl2tfUo3xsU/exec";
 
   const userColors = {
     "951377763": "blue",
@@ -149,54 +149,101 @@
   async function loadPriemka() {
     priemkaListElem.innerHTML = "<p style='text-align:center;color:#666;'>Загрузка...</p>";
     try {
-      const res = await fetch(apiUrl + "?action=getPriemka"); const data = await res.json();
+      const res = await fetch(apiUrl + "?action=getPriemka");
+      const data = await res.json();
       if (!data?.success) { priemkaListElem.innerHTML = `<p style='color:red;text-align:center;'>Ошибка</p>`; return; }
       priemkaListElem.innerHTML = "";
+
       (data.items || []).forEach(it => {
-        const row = document.createElement("div"); row.className = "priemka-row";
-        row.style.display = "flex"; row.style.justifyContent = "space-between"; row.style.padding="6px"; row.style.border="1px solid #e6e6e6"; row.style.margin="6px 4px"; row.style.borderRadius="8px";
+        const row = document.createElement("div");
+        row.className = "priemka-row";
+        row.style.display = "flex";
+        row.style.justifyContent = "space-between";
+        row.style.padding = "6px";
+        row.style.border = "1px solid #e6e6e6";
+        row.style.margin = "6px 4px";
+        row.style.borderRadius = "8px";
 
-        const label = document.createElement("div"); label.textContent = it.name; label.style.flex="1"; label.style.marginRight="8px";
+        // сохраняем целевое G в data-атрибуте
+        row.dataset.g = (it.g === null || it.g === undefined) ? "" : String(it.g);
+        row.dataset.rowIndex = String(it.rowIndex);
 
-        const input = document.createElement("input"); input.type="number"; input.value = it.value || 0; input.style.width="64px"; input.style.textAlign="center";
+        const label = document.createElement("div");
+        label.textContent = it.name;
+        label.style.flex = "1";
+        label.style.marginRight = "8px";
 
-        // Обновление H при вводе
-        input.addEventListener("input", async () => { 
-          await sendToGAS({ action:"updatePriemka", row: it.rowIndex, value: Number(input.value) });
-          checkPriemkaCompletion();
+        const input = document.createElement("input");
+        input.type = "number";
+        // если в H уже есть значение (h !== null), ставим его, иначе оставляем пустоту
+        input.value = (it.h === null || it.h === undefined) ? "" : String(it.h);
+        input.style.width = "64px";
+        input.style.textAlign = "center";
+
+        // При вводе — отправляем H в GAS (updatePriemka) и затем проверяем совпадения
+        input.addEventListener("input", async () => {
+          const v = input.value === "" ? null : Number(input.value);
+          await sendToGAS({ action: "updatePriemka", row: it.rowIndex, value: v });
+          await checkPriemkaCompletion();
         });
 
-        row.appendChild(label); row.appendChild(input); priemkaListElem.appendChild(row);
+        row.appendChild(label);
+        row.appendChild(input);
+        priemkaListElem.appendChild(row);
       });
 
-      // после загрузки проверяем заполненные H
-      checkPriemkaCompletion();
-
-    } catch {}
+      // после загрузки проверяем (подтягиваем пустые H не нужно — H показаны из сервера)
+      await checkPriemkaCompletion();
+    } catch (err) {
+      dbg("loadPriemka error:", err);
+      priemkaListElem.innerHTML = `<p style='color:red;text-align:center;'>Ошибка загрузки</p>`;
+    }
   }
 
   async function checkPriemkaCompletion() {
-    const rows = document.querySelectorAll(".priemka-row");
+    const rows = Array.from(document.querySelectorAll(".priemka-row"));
     if (!rows.length) return;
     let allMatched = true;
 
-    // загружаем G и H из листа приёмки
+    // Берём свежие значения G и H с сервера, чтобы сравнение было корректным
     const res = await fetch(apiUrl + "?action=getPriemka");
     const data = await res.json();
     if (!data?.success) return;
 
-    rows.forEach((row, i) => {
+    // data.items содержит объекты { rowIndex, name, g, h }
+    // создаём мапу по rowIndex (на случай, если порядок поменяется)
+    const map = new Map();
+    (data.items || []).forEach(it => map.set(String(it.rowIndex), it));
+
+    rows.forEach(row => {
       const input = row.querySelector("input");
-      const gValue = data.items[i]?.value || 0; // значение из G
-      if (input.value === "" && gValue !== undefined) input.value = gValue; // если H пусто — подтягиваем
-      if (Number(input.value) !== Number(gValue)) allMatched = false;
+      const rowIndex = row.dataset.rowIndex;
+      const info = map.get(rowIndex) || {};
+      const gValue = (info.g === null || info.g === undefined) ? null : Number(info.g);
+      const hValue = (input.value === "" ? null : Number(input.value));
+
+      // если целевое G задано, а H пусто — считаем несовпадением
+      if (gValue === null) {
+        // если нет целевого значения — не учитываем в проверке (или можно считать требующим ручной проверки)
+        allMatched = false;
+        return;
+      }
+
+      // строгая проверка: H обязательно равна G и не null
+      if (hValue === null || Number(hValue) !== Number(gValue)) {
+        allMatched = false;
+      }
     });
 
     if (allMatched) {
-      priemkaMsgElem.textContent = "Приемка совпала!"; priemkaMsgElem.style.color="green";
+      priemkaMsgElem.textContent = "Приемка совпала!";
+      priemkaMsgElem.style.color = "green";
       await sendToGAS({ action: "sendPriemkaMessage" });
-    } else priemkaMsgElem.textContent = "";
+    } else {
+      priemkaMsgElem.textContent = "";
+    }
   }
+
 
   function setupTabSwitching() {
     document.querySelectorAll(".bottom-bar button[data-page]").forEach(btn => {
