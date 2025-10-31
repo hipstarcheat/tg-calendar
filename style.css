@@ -18,6 +18,11 @@ body {
   display: block;
 }
 
+
+#priemkaMsgElem {
+  transition: color 0.3s ease, opacity 0.3s ease;
+}
+
 /* ========== КАЛЕНДАРЬ (grid — корректный перенос рядами) ========== */
 #calendar {
   display: grid;

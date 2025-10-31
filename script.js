@@ -240,8 +240,10 @@
       priemkaMsgElem.style.color = "green";
       await sendToGAS({ action: "sendPriemkaMessage" });
     } else {
-      priemkaMsgElem.textContent = "";
+      priemkaMsgElem.textContent = "Не совпадает!";
+      priemkaMsgElem.style.color = "red";
     }
+
   }
 
 
