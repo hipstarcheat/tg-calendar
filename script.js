@@ -5,7 +5,7 @@
   const user = tg?.initDataUnsafe?.user || {};
   const userId = String(user.id || "");
 
-  const apiUrl = "https://script.google.com/macros/s/AKfycbxKFN4S613Fhod01BiY1fXfxRvhK-HFJLi3y65pXZTlwM-c7jQ2Gf2i_Bl2tfUo3xsU/exec";
+  const apiUrl = "https://script.google.com/macros/s/AKfycbzciItSBQ1mYikkvZ1UA18H5zRUeSGLNH-0cBoWc5wtCSQ8GFnBfdXQlXkI8GCRIxZm/exec";
 
   const userColors = {
     "951377763": "blue",
@@ -275,6 +275,56 @@
   }
 
 
+  async function loadSubscribersGrowth() {
+    try {
+      const res = await fetch(apiUrl + "?action=getSubscribersGrowth");
+      const data = await res.json();
+      if (!data.success) return;
+
+      const cont = document.createElement("div");
+      cont.id = "subsGrowth";
+      cont.style.textAlign = "center";
+      cont.style.margin = "20px 0";
+
+      const title = document.createElement("h3");
+      title.textContent = "📊 Прирост подписчиков";
+      title.style.color = "#444";
+      cont.appendChild(title);
+
+      const text = document.createElement("p");
+      text.textContent = `Подписчики: ${data.currentSubs} (прирост: +${data.growth})`;
+      text.style.marginBottom = "10px";
+      text.style.color = "#333";
+      cont.appendChild(text);
+
+      const barContainer = document.createElement("div");
+      barContainer.style.width = "90%";
+      barContainer.style.height = "20px";
+      barContainer.style.margin = "0 auto";
+      barContainer.style.borderRadius = "10px";
+      barContainer.style.background = "#eee";
+      barContainer.style.position = "relative";
+
+      const progress = document.createElement("div");
+      progress.style.position = "absolute";
+      progress.style.left = "0";
+      progress.style.top = "0";
+      progress.style.bottom = "0";
+      progress.style.width = Math.min(100, (data.growth / data.levelF) * 100) + "%";
+      progress.style.background = data.progressColor;
+      progress.style.borderRadius = "10px";
+      progress.style.transition = "width 0.8s ease";
+      barContainer.appendChild(progress);
+
+      cont.appendChild(barContainer);
+      document.body.appendChild(cont);
+    } catch (e) {
+      console.error("loadSubscribersGrowth error:", e);
+    }
+  }
+
+
+
   function setupTabSwitching() {
     document.querySelectorAll(".bottom-bar button[data-page]").forEach(btn => {
       btn.addEventListener("click", () => {
@@ -288,6 +338,6 @@
     });
   }
 
-  function init() { createCalendarIfNeeded(); setupTabSwitching(); if (document.querySelector(".page.active")?.id==="page-grafik") loadDays(); }
+  function init() { createCalendarIfNeeded(); setupTabSwitching(); if (document.querySelector(".page.active")?.id==="page-grafik") loadDays(); loadSubscribersGrowth();}
   init();
 })();
