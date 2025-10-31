@@ -5,7 +5,7 @@
   const user = tg?.initDataUnsafe?.user || {};
   const userId = String(user.id || "");
 
-  const apiUrl = "https://script.google.com/macros/s/AKfycbzciItSBQ1mYikkvZ1UA18H5zRUeSGLNH-0cBoWc5wtCSQ8GFnBfdXQlXkI8GCRIxZm/exec";
+  const apiUrl = "https://script.google.com/macros/s/AKfycbzh24OcXQIkmUBzR4IqO85AstU7TPFJCxYgJg2D6JO8Qyl6RSRv0kYs3sRnsszT65mx/exec";
 
   const userColors = {
     "951377763": "blue",
@@ -323,6 +323,70 @@
     }
   }
 
+  async function loadCleaning() {
+    const container = document.getElementById("cleaningContainer");
+    if(!container) return;
+    container.innerHTML = "Загрузка...";
+    try {
+      const res = await fetch(apiUrl + "?action=getCleaning");
+      const data = await res.json();
+      if(!data.success) { container.innerHTML = "Ошибка загрузки"; return; }
+      container.innerHTML = "";
+      data.items.forEach(it => {
+        const rect = document.createElement("div");
+        rect.className = "cleaning-rect";
+        rect.textContent = it.name;
+        rect.style.position = "absolute";
+        rect.style.opacity = "0.7";
+        rect.style.cursor = userId === "298802988" ? "move" : "default";
+        // цвет по дате
+        const lastDate = it.lastDate ? new Date(it.lastDate) : null;
+        const now = new Date();
+        const daysThreshold = Number(it.daysThreshold) || 0;
+        if(lastDate && (now - lastDate)/(1000*60*60*24) > daysThreshold) rect.style.backgroundColor = "red";
+        else rect.style.backgroundColor = "lightblue";
+        rect.style.border = "1px solid #000";
+
+        // позиция и размер
+        const [x,y] = it.position.split(",").map(Number);
+        const [w,h] = it.size.split(",").map(Number);
+        rect.style.left = x+"px";
+        rect.style.top = y+"px";
+        rect.style.width = w+"px";
+        rect.style.height = h+"px";
+
+        // клик для записи даты
+        rect.onclick = async () => {
+          if(["951377763","578828973"].includes(userId)) {
+            const today = new Date().toLocaleDateString();
+            await sendToGAS({ action:"updateCleaningDate", row: it.rowIndex, userId, date: today });
+            loadCleaning();
+          }
+        };
+
+        // drag для редактирования позиции
+        if(userId === "298802988") {
+          let offsetX, offsetY, dragging=false;
+          rect.onmousedown = e => { dragging=true; offsetX=e.offsetX; offsetY=e.offsetY; };
+          document.onmousemove = e => {
+            if(!dragging) return;
+            rect.style.left = (e.clientX-offsetX)+"px";
+            rect.style.top = (e.clientY-offsetY)+"px";
+          };
+          rect.onmouseup = async e => {
+            if(!dragging) return;
+            dragging=false;
+            const pos = `${parseInt(rect.style.left)},${parseInt(rect.style.top)}`;
+            const size = `${parseInt(rect.style.width)},${parseInt(rect.style.height)}`;
+            await sendToGAS({ action:"updateCleaningPosition", row: it.rowIndex, position: pos, size });
+          };
+        }
+
+        container.appendChild(rect);
+      });
+    } catch(e) { container.innerHTML = "Ошибка"; console.error(e); }
+  }
+
 
 
   function setupTabSwitching() {
@@ -334,6 +398,8 @@
         document.querySelectorAll(".bottom-bar button").forEach(b => b.classList.remove("active")); btn.classList.add("active");
         if (pageId === "page-grafik") loadDays();
         if (pageId === "page-acceptance") loadPriemka();
+        if (pageId === "page-cleaning") loadCleaning();
+        if (pageId === "page-plan") loadSubscribersGrowth();
       });
     });
   }
