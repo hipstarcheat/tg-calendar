@@ -1,25 +1,33 @@
 /* ========== БАЗОВЫЕ ========== */
+/* Создаём overlay для фонового изображения */
 body {
   font-family: sans-serif;
-  margin: 10px;
+  margin: 0;
   color: #813f01;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  position: relative;
+  min-height: 100vh;
+  background: #fff; /* запасной цвет */
+}
 
-  /* Фон */
-  background-image: url("back.jpg"); /* твоя картинка */
+/* сам фон через псевдоэлемент */
+body::before {
+  content: "";
+  position: fixed;   /* фиксируем на весь экран */
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url("back.jpg");
   background-size: cover;
   background-repeat: no-repeat;
-  background-attachment: fixed;
   background-position: center;
-
-  /* Превращаем в светло-серую */
-  background-color: rgba(255,255,255,0.6); /* светлый overlay поверх картинки */
-  background-blend-mode: lighten; /* смешиваем цвет и картинку */
-
-  /* Дополнительно фильтры: полностью серое + ярче */
+  z-index: -1;       /* за всеми элементами */
   filter: grayscale(100%) brightness(1.3);
+  background-color: rgba(255, 255, 255, 0.973);
+  background-blend-mode: lighten;
 }
+
 
 
 /* ========== СТРАНИЦЫ (если используешь вкладки) ========== */
