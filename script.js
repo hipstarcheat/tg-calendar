@@ -80,7 +80,7 @@
     [...calendar.children].forEach(c => { c.className = "day"; delete c.dataset.userId; });
     items.forEach(item => {
       const d = parseInt(item.date, 10);
-      if (!d || d < 1 || d > 31) return;
+      if (!d || d < 1 || d > 30) return;
       const cell = [...calendar.children][d-1];
       markCellByUser(cell, String(item.userId));
     });
