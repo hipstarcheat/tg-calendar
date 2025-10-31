@@ -58,7 +58,7 @@
 
   function createCalendarIfNeeded() {
     if (!calendar || calendar.children.length) return;
-    for (let day = 1; day <= 31; day++) {
+    for (let day = 1; day <= 30; day++) {
       const cell = document.createElement("div");
       cell.className = "day";
       cell.textContent = day;
