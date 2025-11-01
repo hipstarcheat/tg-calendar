@@ -358,17 +358,28 @@
         rect.appendChild(titleDiv);
 
         // --- информация о последней уборке ---
-        const lastCleaner = it.lastUserId === "298802988" ? "Артур"
-                          : it.lastUserId === "578828973" ? "Влад"
-                          : "—";
-        // Берем текст прямо из столбца B, без создания объекта Date
-        const lastDateText = it.lastDate ? it.lastDate : "—";
+      const lastCleaner = it.lastUserId === "298802988" ? "Артур"
+                        : it.lastUserId === "578828973" ? "Влад"
+                        : "—";
 
-        const infoDiv = document.createElement("div");
-        infoDiv.style.fontSize = "0.33em"; // в 3 раза меньше
-        infoDiv.style.marginTop = "2px";
-        infoDiv.textContent = `Последняя уборка: ${lastDateText} (${lastCleaner})`;
-        rect.appendChild(infoDiv);
+      // Берем строку из B, ожидаем формат "1.11.2025", преобразуем в "01.11.25"
+      let lastDateText = it.lastDate ? it.lastDate : "—";
+      if(lastDateText !== "—") {
+        const parts = lastDateText.split(".");
+        if(parts.length === 3) {
+          const day = parts[0].padStart(2,"0");
+          const month = parts[1].padStart(2,"0");
+          const year = parts[2].slice(-2);
+          lastDateText = `${day}.${month}.${year}`;
+        }
+      }
+
+      const infoDiv = document.createElement("div");
+      infoDiv.style.fontSize = "0.33em"; // в 3 раза меньше
+      infoDiv.style.marginTop = "2px";
+      infoDiv.textContent = `${lastDateText} (${lastCleaner})`;
+      rect.appendChild(infoDiv);
+
 
 
         // Цвет по дате
