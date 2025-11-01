@@ -351,20 +351,25 @@
         rect.style.boxSizing = "border-box";
 
         // --- название ---
+        // --- название ---
         const titleDiv = document.createElement("div");
         titleDiv.textContent = it.name;
+        titleDiv.style.fontSize = "1em"; // основной размер
         rect.appendChild(titleDiv);
 
         // --- информация о последней уборке ---
         const lastCleaner = it.lastUserId === "298802988" ? "Артур"
                           : it.lastUserId === "578828973" ? "Влад"
                           : "—";
+        // Берем текст прямо из столбца B, без создания объекта Date
         const lastDateText = it.lastDate ? it.lastDate : "—";
+
         const infoDiv = document.createElement("div");
-        infoDiv.style.fontSize = "0.8em";
-        infoDiv.style.marginTop = "4px";
+        infoDiv.style.fontSize = "0.33em"; // в 3 раза меньше
+        infoDiv.style.marginTop = "2px";
         infoDiv.textContent = `Последняя уборка: ${lastDateText} (${lastCleaner})`;
         rect.appendChild(infoDiv);
+
 
         // Цвет по дате
         const lastDate = it.lastDate ? new Date(it.lastDate) : null;
