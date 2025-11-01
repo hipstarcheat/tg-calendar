@@ -366,18 +366,31 @@
       let lastDateText = "—";
 
       if(it.lastDate) {
-        if(typeof it.lastDate === "string") {
-          // Уже текст из ячейки
-          const parts = it.lastDate.split(".");
-          if(parts.length === 3){
-            const day = parts[0].padStart(2,"0");
-            const month = parts[1].padStart(2,"0");
-            const year = parts[2].slice(-2);
-            lastDateText = `${day}.${month}.${year}`;
+        let d;
+
+        // Если это объект Date
+        if(it.lastDate instanceof Date) {
+          d = it.lastDate;
+        } 
+        // Если это строка в формате ISO или "11.10.2025"
+        else if(typeof it.lastDate === "string") {
+          // Проверим, есть ли точка — значит формат DD.MM.YYYY
+          if(it.lastDate.includes(".")) {
+            const parts = it.lastDate.split(".");
+            if(parts.length === 3) {
+              const day = parts[0].padStart(2,"0");
+              const month = parts[1].padStart(2,"0");
+              const year = parts[2].slice(-2);
+              lastDateText = `${day}.${month}.${year}`;
+            }
+          } else {
+            // Пробуем распарсить ISO
+            const tmp = new Date(it.lastDate);
+            if(!isNaN(tmp)) d = tmp;
           }
-        } else if(it.lastDate instanceof Date) {
-          // Объект Date
-          const d = it.lastDate;
+        }
+
+        if(d) {
           const day = String(d.getDate()).padStart(2,"0");
           const month = String(d.getMonth()+1).padStart(2,"0");
           const year = String(d.getFullYear()).slice(-2);
