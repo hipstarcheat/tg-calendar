@@ -358,21 +358,22 @@
         rect.appendChild(titleDiv);
 
         // --- информация о последней уборке ---
-      const lastCleaner = it.lastUserId === "298802988" ? "Артур"
-                        : it.lastUserId === "578828973" ? "Влад"
+      const lastCleaner = String(it.lastUserId) === "298802988" ? "Артур"
+                        : String(it.lastUserId) === "578828973" ? "Влад"
                         : "—";
 
       // Берем строку из B, ожидаем формат "1.11.2025", преобразуем в "01.11.25"
-      let lastDateText = it.lastDate ? it.lastDate : "—";
+      let lastDateText = it.lastDate || "—"; // берем строку из B
       if(lastDateText !== "—") {
         const parts = lastDateText.split(".");
-        if(parts.length === 3) {
+        if(parts.length === 3){
           const day = parts[0].padStart(2,"0");
           const month = parts[1].padStart(2,"0");
           const year = parts[2].slice(-2);
           lastDateText = `${day}.${month}.${year}`;
         }
       }
+
 
       const infoDiv = document.createElement("div");
       infoDiv.style.fontSize = "0.5em"; // в 3 раза меньше
