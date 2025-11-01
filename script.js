@@ -358,7 +358,7 @@
         rect.appendChild(titleDiv);
 
         // --- информация о последней уборке ---
-      const lastCleaner = String(it.lastUserId) === "298802988" ? "Артур"
+      const lastCleaner = String(it.lastUserId) === "951377763" ? "Артур"
                         : String(it.lastUserId) === "578828973" ? "Влад"
                         : "—";
 
@@ -413,7 +413,7 @@
 
         // Клик для записи даты
         rect.onclick = async () => {
-          if(["298802988","578828973"].includes(userId)) {
+          if(["951377763","578828973"].includes(userId)) {
             const today = new Date().toLocaleDateString();
             await sendToGAS({ action:"updateCleaningDate", row: it.rowIndex, userId, date: today });
             loadCleaning();
@@ -421,7 +421,7 @@
         };
 
         // Drag для редактирования позиции
-        if(userId === "2988029881") {
+        if(userId === "298802988") {
           let offsetX, offsetY, dragging=false;
           rect.onmousedown = e => { dragging=true; offsetX=e.offsetX; offsetY=e.offsetY; };
           document.onmousemove = e => {
