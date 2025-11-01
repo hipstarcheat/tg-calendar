@@ -5,7 +5,7 @@
   const user = tg?.initDataUnsafe?.user || {};
   const userId = String(user.id || "");
 
-  const apiUrl = "https://script.google.com/macros/s/AKfycbzh24OcXQIkmUBzR4IqO85AstU7TPFJCxYgJg2D6JO8Qyl6RSRv0kYs3sRnsszT65mx/exec";
+  const apiUrl = "https://script.google.com/macros/s/AKfycbxRgs5t6hJca2x6PyPGBjRbTYP1wgTGuXUj2B1qUGVQkuS3qtZWoSbIt0qS3s9glIli/exec";
 
   const userColors = {
     "951377763": "blue",
@@ -332,6 +332,10 @@
       const data = await res.json();
       if(!data.success) { container.innerHTML = "Ошибка загрузки"; return; }
       container.innerHTML = "";
+
+      const containerW = container.clientWidth;
+      const containerH = container.clientHeight;
+
       data.items.forEach(it => {
         const rect = document.createElement("div");
         rect.className = "cleaning-rect";
@@ -339,46 +343,64 @@
         rect.style.position = "absolute";
         rect.style.opacity = "0.7";
         rect.style.cursor = userId === "298802988" ? "move" : "default";
-        // цвет по дате
+        rect.style.border = "1px solid #000";
+
+        // Цвет по дате
         const lastDate = it.lastDate ? new Date(it.lastDate) : null;
         const now = new Date();
         const daysThreshold = Number(it.daysThreshold) || 0;
         if(lastDate && (now - lastDate)/(1000*60*60*24) > daysThreshold) rect.style.backgroundColor = "red";
         else rect.style.backgroundColor = "lightblue";
-        rect.style.border = "1px solid #000";
 
-        // позиция и размер
-        const [x,y] = it.position.split(",").map(Number);
-        const [w,h] = it.size.split(",").map(Number);
-        rect.style.left = x+"px";
-        rect.style.top = y+"px";
-        rect.style.width = w+"px";
-        rect.style.height = h+"px";
+        // Позиция и размер (нормализуем из "x*y")
+        const [posX,posY] = it.position.split("*").map(Number);
+        const [sizeW,sizeH] = it.size.split("*").map(Number);
 
-        // клик для записи даты
+        rect.style.left = (posX/100*containerW) + "px";
+        rect.style.top = (posY/100*containerH) + "px";
+        rect.style.width = (sizeW/100*containerW) + "px";
+        rect.style.height = (sizeH/100*containerH) + "px";
+
+        // Клик для записи даты
         rect.onclick = async () => {
-          if(["951377763","578828973"].includes(userId)) {
+          if(["298802988","578828973"].includes(userId)) {
             const today = new Date().toLocaleDateString();
             await sendToGAS({ action:"updateCleaningDate", row: it.rowIndex, userId, date: today });
             loadCleaning();
           }
         };
 
-        // drag для редактирования позиции
+        // Drag для редактирования позиции
         if(userId === "298802988") {
           let offsetX, offsetY, dragging=false;
           rect.onmousedown = e => { dragging=true; offsetX=e.offsetX; offsetY=e.offsetY; };
           document.onmousemove = e => {
             if(!dragging) return;
-            rect.style.left = (e.clientX-offsetX)+"px";
-            rect.style.top = (e.clientY-offsetY)+"px";
+            const newX = e.clientX - container.getBoundingClientRect().left - offsetX;
+            const newY = e.clientY - container.getBoundingClientRect().top - offsetY;
+            rect.style.left = Math.max(0, Math.min(containerW - rect.clientWidth, newX)) + "px";
+            rect.style.top = Math.max(0, Math.min(containerH - rect.clientHeight, newY)) + "px";
           };
           rect.onmouseup = async e => {
             if(!dragging) return;
             dragging=false;
-            const pos = `${parseInt(rect.style.left)},${parseInt(rect.style.top)}`;
-            const size = `${parseInt(rect.style.width)},${parseInt(rect.style.height)}`;
-            await sendToGAS({ action:"updateCleaningPosition", row: it.rowIndex, position: pos, size });
+
+            const rectLeft = parseFloat(rect.style.left);
+            const rectTop = parseFloat(rect.style.top);
+            const rectW = parseFloat(rect.style.width);
+            const rectH = parseFloat(rect.style.height);
+
+            // пересчет в 0-100
+            const posX = Math.round((rectLeft/containerW)*100);
+            const posY = Math.round((rectTop/containerH)*100);
+            const sizeW = Math.round((rectW/containerW)*100);
+            const sizeH = Math.round((rectH/containerH)*100);
+
+            await sendToGAS({ action:"updateCleaningPosition", row: it.rowIndex, 
+              position: posX+"*"+posY, size: sizeW+"*"+sizeH
+            });
+
+            loadCleaning(); // обновляем отображение
           };
         }
 
