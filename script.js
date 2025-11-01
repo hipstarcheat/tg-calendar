@@ -371,7 +371,7 @@
         };
 
         // Drag для редактирования позиции
-        if(userId === "298802988") {
+        if(userId === "2988029881") {
           let offsetX, offsetY, dragging=false;
           rect.onmousedown = e => { dragging=true; offsetX=e.offsetX; offsetY=e.offsetY; };
           document.onmousemove = e => {
