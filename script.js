@@ -339,11 +339,32 @@
       data.items.forEach(it => {
         const rect = document.createElement("div");
         rect.className = "cleaning-rect";
-        rect.textContent = it.name;
         rect.style.position = "absolute";
         rect.style.opacity = "0.7";
         rect.style.cursor = userId === "298802988" ? "move" : "default";
         rect.style.border = "1px solid #000";
+        rect.style.display = "flex";
+        rect.style.flexDirection = "column";
+        rect.style.justifyContent = "flex-start";
+        rect.style.alignItems = "center";
+        rect.style.padding = "4px";
+        rect.style.boxSizing = "border-box";
+
+        // --- название ---
+        const titleDiv = document.createElement("div");
+        titleDiv.textContent = it.name;
+        rect.appendChild(titleDiv);
+
+        // --- информация о последней уборке ---
+        const lastCleaner = it.lastUserId === "298802988" ? "Артур"
+                          : it.lastUserId === "578828973" ? "Влад"
+                          : "—";
+        const lastDateText = it.lastDate ? it.lastDate : "—";
+        const infoDiv = document.createElement("div");
+        infoDiv.style.fontSize = "0.8em";
+        infoDiv.style.marginTop = "4px";
+        infoDiv.textContent = `Последняя уборка: ${lastDateText} (${lastCleaner})`;
+        rect.appendChild(infoDiv);
 
         // Цвет по дате
         const lastDate = it.lastDate ? new Date(it.lastDate) : null;
@@ -408,6 +429,7 @@
       });
     } catch(e) { container.innerHTML = "Ошибка"; console.error(e); }
   }
+
 
 
 
