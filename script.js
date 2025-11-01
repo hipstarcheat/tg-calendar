@@ -375,7 +375,7 @@
       }
 
       const infoDiv = document.createElement("div");
-      infoDiv.style.fontSize = "0.33em"; // в 3 раза меньше
+      infoDiv.style.fontSize = "0.5em"; // в 3 раза меньше
       infoDiv.style.marginTop = "2px";
       infoDiv.textContent = `${lastDateText} (${lastCleaner})`;
       rect.appendChild(infoDiv);
