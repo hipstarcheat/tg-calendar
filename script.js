@@ -464,6 +464,6 @@
     });
   }
 
-  function init() { createCalendarIfNeeded(); setupTabSwitching(); if (document.querySelector(".page.active")?.id==="page-grafik") loadDays(); loadSubscribersGrowth();}
+  function init() { createCalendarIfNeeded(); setupTabSwitching(); if (document.querySelector(".page.active")?.id==="page-grafik") loadDays();}
   init();
 })();
